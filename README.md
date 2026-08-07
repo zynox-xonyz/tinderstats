@@ -13,9 +13,6 @@ Du öffnest die Datei, ziehst deinen Export hinein, fertig.
    `myData.zip`, die wird im Browser entpackt.
 3. Der Report erscheint sofort.
 
-Wenn du das Projekt über GitHub Pages veröffentlichst, ist die Seite direkt unter
-`https://DEINNAME.github.io/tinderreport/` erreichbar, weil die Datei `index.html` heißt.
-
 ## Woher bekomme ich den Export?
 
 In der Tinder App unter Einstellungen die Option „Kopie meiner Daten anfordern“ wählen.
