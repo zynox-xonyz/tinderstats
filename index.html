@@ -1,0 +1,2816 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tinder Data Report</title>
+<style>
+/* ============================================================
+   Tokens
+   ============================================================ */
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7;
+  --surface:#fcfcfb;
+  --ink:#0b0b0b;
+  --ink-2:#52514e;
+  --ink-3:#898781;
+  --grid:#e1e0d9;
+  --axis:#c3c2b7;
+  --hair:rgba(11,11,11,.10);
+  --hover:rgba(11,11,11,.045);
+  --shadow:0 1px 2px rgba(11,11,11,.05), 0 8px 24px -12px rgba(11,11,11,.14);
+
+  /* categorical slots, fixed order, never cycled */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+
+  /* status */
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --good-text:#006300;
+
+  /* sequential blue ramp (heatmap): near-surface -> far */
+  --heat-0:#eeedea;
+  --heat-1:#cde2fb; --heat-2:#9ec5f4; --heat-3:#6da7ec;
+  --heat-4:#3987e5; --heat-5:#256abf; --heat-6:#104281;
+
+  /* ordinal blue ramp (funnel), light: no lighter than step 250 */
+  --ord-1:#86b6ef; --ord-2:#5598e7; --ord-3:#2a78d6; --ord-4:#1c5cab; --ord-5:#104281;
+
+  --spark:#c3c2b7;
+  --tint:rgba(42,120,214,.10);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --plane:#0d0d0d;
+    --surface:#1a1a19;
+    --ink:#ffffff;
+    --ink-2:#c3c2b7;
+    --ink-3:#898781;
+    --grid:#2c2c2a;
+    --axis:#383835;
+    --hair:rgba(255,255,255,.10);
+    --hover:rgba(255,255,255,.06);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --good-text:#0ca30c;
+    --heat-0:#232322;
+    --heat-1:#0d366b; --heat-2:#104281; --heat-3:#184f95;
+    --heat-4:#256abf; --heat-5:#3987e5; --heat-6:#6da7ec;
+    --ord-1:#184f95; --ord-2:#256abf; --ord-3:#3987e5; --ord-4:#6da7ec; --ord-5:#9ec5f4;
+    --spark:#52514e;
+    --tint:rgba(57,135,229,.14);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d;
+  --surface:#1a1a19;
+  --ink:#ffffff;
+  --ink-2:#c3c2b7;
+  --ink-3:#898781;
+  --grid:#2c2c2a;
+  --axis:#383835;
+  --hair:rgba(255,255,255,.10);
+  --hover:rgba(255,255,255,.06);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+  --good-text:#0ca30c;
+  --heat-0:#232322;
+  --heat-1:#0d366b; --heat-2:#104281; --heat-3:#184f95;
+  --heat-4:#256abf; --heat-5:#3987e5; --heat-6:#6da7ec;
+  --ord-1:#184f95; --ord-2:#256abf; --ord-3:#3987e5; --ord-4:#6da7ec; --ord-5:#9ec5f4;
+  --spark:#52514e;
+  --tint:rgba(57,135,229,.14);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--plane);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px;
+  line-height:1.5;
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{margin:0;font-weight:600;letter-spacing:-.01em}
+p{margin:0}
+button{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.muted{color:var(--ink-3)}
+.sec{color:var(--ink-2)}
+.mono-num{font-variant-numeric:tabular-nums}
+
+/* ============================================================
+   Topbar
+   ============================================================ */
+.topbar{
+  position:sticky;top:0;z-index:40;
+  background:color-mix(in srgb, var(--plane) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--hair);
+}
+.topbar-in{display:flex;align-items:center;gap:12px;height:56px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15px}
+.flame{width:20px;height:20px;flex:none}
+.topbar-spacer{flex:1}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  height:34px;padding:0 12px;
+  border:1px solid var(--hair);border-radius:9px;
+  background:var(--surface);
+  cursor:pointer;font-size:13.5px;font-weight:500;
+  transition:background .15s ease, border-color .15s ease, transform .1s ease;
+}
+.btn:hover{background:var(--hover)}
+.btn:active{transform:translateY(1px)}
+.btn svg{width:15px;height:15px;flex:none}
+.btn-ghost{background:transparent}
+
+/* ============================================================
+   Dropzone / intake
+   ============================================================ */
+.intake{min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.intake-inner{width:100%;max-width:620px;text-align:center}
+.intake h1{font-size:clamp(28px,5vw,40px);line-height:1.15;margin-bottom:12px}
+.intake .lede{color:var(--ink-2);font-size:16px;max-width:46ch;margin:0 auto 28px}
+.drop{
+  position:relative;
+  border:1.5px dashed var(--axis);border-radius:18px;
+  background:var(--surface);
+  padding:44px 28px;
+  cursor:pointer;
+  transition:border-color .2s ease, background .2s ease, transform .2s ease;
+  overflow:hidden;
+}
+.drop::after{
+  content:"";position:absolute;inset:-40%;
+  background:radial-gradient(circle at 30% 30%, rgba(235,104,52,.16), transparent 55%),
+             radial-gradient(circle at 70% 70%, rgba(227,73,72,.14), transparent 55%);
+  opacity:0;transition:opacity .35s ease;pointer-events:none;
+  animation:drift 14s linear infinite;
+}
+.drop:hover::after,.drop.over::after{opacity:1}
+.drop:hover,.drop.over{border-color:var(--s1);transform:translateY(-2px)}
+.drop.over{background:var(--tint)}
+@keyframes drift{
+  0%{transform:rotate(0deg) scale(1)}
+  50%{transform:rotate(180deg) scale(1.15)}
+  100%{transform:rotate(360deg) scale(1)}
+}
+.drop-icon{width:44px;height:44px;margin:0 auto 14px;color:var(--ink-3);position:relative}
+.drop-title{font-weight:600;font-size:17px;margin-bottom:5px;position:relative}
+.drop-sub{color:var(--ink-3);font-size:13.5px;position:relative}
+.privacy{
+  margin-top:22px;display:inline-flex;align-items:center;gap:8px;
+  font-size:13px;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--hair);
+  padding:8px 14px;border-radius:999px;
+}
+.privacy svg{width:14px;height:14px;color:var(--good-text);flex:none}
+.err{
+  margin-top:18px;padding:12px 14px;border-radius:10px;
+  border:1px solid var(--crit);color:var(--crit);
+  background:color-mix(in srgb, var(--crit) 8%, transparent);
+  font-size:13.5px;text-align:left;
+}
+.hint-list{margin:26px auto 0;max-width:44ch;text-align:left;font-size:13px;color:var(--ink-3);line-height:1.7}
+.hint-list code{
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+  background:var(--hover);padding:1px 5px;border-radius:4px;
+}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+.hero{position:relative;padding:52px 0 34px;overflow:hidden}
+.hero::before{
+  content:"";position:absolute;top:-160px;left:50%;transform:translateX(-50%);
+  width:min(900px,120vw);height:420px;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%, rgba(235,104,52,.13), transparent 62%);
+}
+.hero-in{position:relative}
+.eyebrow{font-size:13px;color:var(--ink-3);letter-spacing:.02em;margin-bottom:10px}
+.hero-fig{
+  font-size:clamp(52px,11vw,88px);
+  font-weight:650;line-height:.95;letter-spacing:-.035em;
+  margin:0 0 8px;
+}
+.hero-cap{color:var(--ink-2);font-size:16px;max-width:52ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:5px 12px;border-radius:999px;
+  border:1px solid var(--hair);background:var(--surface);
+  font-size:13px;color:var(--ink-2);
+}
+.chip b{color:var(--ink);font-weight:600}
+.chip-dot{width:7px;height:7px;border-radius:50%;flex:none}
+
+/* ============================================================
+   Filter row
+   ============================================================ */
+.filters{
+  position:sticky;top:56px;z-index:30;
+  background:color-mix(in srgb, var(--plane) 90%, transparent);
+  backdrop-filter:blur(10px);
+  border-top:1px solid var(--hair);
+  border-bottom:1px solid var(--hair);
+  margin-bottom:26px;
+}
+.filters-in{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 0}
+.flabel{font-size:12.5px;color:var(--ink-3);margin-right:2px}
+.segbar{display:inline-flex;background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:3px;gap:2px}
+.seg{
+  border:0;background:transparent;border-radius:7px;
+  padding:5px 11px;font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--ink-2);transition:background .15s ease,color .15s ease;
+  white-space:nowrap;
+}
+.seg:hover{background:var(--hover)}
+.seg[aria-pressed="true"]{background:var(--s1);color:#fff}
+.range-note{font-size:12.5px;color:var(--ink-3);margin-left:auto}
+input[type="date"]{
+  height:30px;border:1px solid var(--hair);border-radius:8px;
+  background:var(--surface);color:var(--ink);padding:0 8px;font:inherit;font-size:13px;
+}
+
+/* ============================================================
+   Cards & layout
+   ============================================================ */
+section.block{margin:0 0 34px}
+.block-head{margin:0 0 14px}
+.block-head h2{font-size:20px;letter-spacing:-.02em}
+.block-head p{color:var(--ink-3);font-size:13.5px;margin-top:3px}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--hair);
+  border-radius:14px;
+  box-shadow:var(--shadow);
+  padding:18px 18px 16px;
+  opacity:0;transform:translateY(14px);
+  transition:opacity .55s cubic-bezier(.22,.61,.36,1), transform .55s cubic-bezier(.22,.61,.36,1);
+}
+.card.in{opacity:1;transform:none}
+.card-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.card-head h3{font-size:15.5px}
+.card-head p{font-size:13px;color:var(--ink-3);margin-top:2px}
+.card-tools{margin-left:auto;display:flex;gap:6px;align-items:center;flex:none}
+.tool{
+  border:1px solid var(--hair);background:transparent;border-radius:8px;
+  padding:4px 9px;font-size:12.5px;color:var(--ink-2);cursor:pointer;
+  transition:background .15s ease;white-space:nowrap;
+}
+.tool:hover{background:var(--hover)}
+.tool[aria-pressed="true"]{background:var(--s1);border-color:var(--s1);color:#fff}
+
+.grid{display:grid;gap:14px}
+.g-kpi{grid-template-columns:repeat(auto-fill,minmax(196px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fit,minmax(330px,1fr))}
+.g-3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+
+/* ============================================================
+   Stat tiles
+   ============================================================ */
+.tile{
+  background:var(--surface);border:1px solid var(--hair);border-radius:13px;
+  padding:15px 15px 13px;display:flex;flex-direction:column;gap:2px;min-height:112px;
+  opacity:0;transform:translateY(12px);
+  transition:opacity .5s cubic-bezier(.22,.61,.36,1), transform .5s cubic-bezier(.22,.61,.36,1);
+}
+.tile.in{opacity:1;transform:none}
+.tile-label{font-size:12.5px;color:var(--ink-2);display:flex;align-items:center;gap:6px}
+.tile-val{font-size:29px;font-weight:650;letter-spacing:-.02em;line-height:1.15;margin-top:3px}
+.tile-val small{font-size:15px;font-weight:500;color:var(--ink-3);margin-left:3px;letter-spacing:0}
+.tile-sub{font-size:12px;color:var(--ink-3);margin-top:auto;padding-top:8px}
+.tile-spark{margin-top:auto;padding-top:10px;height:30px}
+.tile-spark svg{display:block;width:100%;height:30px;overflow:visible}
+
+/* ============================================================
+   Charts
+   ============================================================ */
+.chart-host{width:100%}
+.chart-host svg{display:block;width:100%;overflow:visible}
+.axis-text{font-size:11px;fill:var(--ink-3)}
+.axis-text.tab{font-variant-numeric:tabular-nums}
+.grid-line{stroke:var(--grid);stroke-width:1}
+.base-line{stroke:var(--axis);stroke-width:1}
+.hit{fill:transparent;cursor:crosshair}
+.hover-band{fill:var(--hover);opacity:0;transition:opacity .12s ease;pointer-events:none}
+.hover-band.on{opacity:1}
+.crosshair{stroke:var(--axis);stroke-width:1;opacity:0;pointer-events:none}
+.crosshair.on{opacity:1}
+.dot-ring{stroke:var(--surface);stroke-width:2}
+
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:2px 0 12px}
+.lg{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2)}
+.lg-rect{width:11px;height:11px;border-radius:3px;flex:none}
+.lg-line{width:14px;height:2px;border-radius:2px;flex:none}
+.lg-dia{width:9px;height:9px;transform:rotate(45deg);border-radius:2px;flex:none}
+
+/* animations */
+.an-col{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0)}
+.card.in .an-col{animation:growY .7s cubic-bezier(.22,.61,.36,1) forwards;animation-delay:calc(var(--i,0) * 9ms)}
+@keyframes growY{to{transform:scaleY(1)}}
+.an-row{transform-box:fill-box;transform-origin:left;transform:scaleX(0)}
+.card.in .an-row{animation:growX .75s cubic-bezier(.22,.61,.36,1) forwards;animation-delay:calc(var(--i,0) * 55ms)}
+@keyframes growX{to{transform:scaleX(1)}}
+.an-line{stroke-dasharray:1;stroke-dashoffset:1}
+.card.in .an-line{animation:draw 1.15s cubic-bezier(.4,.1,.2,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.an-fade{opacity:0}
+.card.in .an-fade{animation:fadeIn .5s ease forwards;animation-delay:var(--d,.8s)}
+@keyframes fadeIn{to{opacity:1}}
+.an-cell{opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.55)}
+.card.in .an-cell{animation:pop .45s cubic-bezier(.22,.61,.36,1) forwards;animation-delay:calc(var(--i,0) * 2.2ms)}
+@keyframes pop{to{opacity:1;transform:scale(1)}}
+
+/* heatmap */
+.hm-year{margin-bottom:16px}
+.hm-year-label{font-size:12.5px;color:var(--ink-2);font-weight:600;margin-bottom:6px}
+.hm-scroll{overflow-x:auto;padding-bottom:4px}
+.hm-legend{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-3);margin-top:6px}
+.hm-legend .sw{width:11px;height:11px;border-radius:3px;flex:none}
+.hm-cell{cursor:pointer}
+
+/* funnel */
+.funnel-row{display:grid;grid-template-columns:1fr;gap:0}
+.fn-line{display:flex;align-items:center;gap:12px;padding:7px 0}
+.fn-name{width:132px;flex:none;font-size:13px;color:var(--ink-2)}
+.fn-track{flex:1;height:26px;position:relative;min-width:0}
+.fn-bar{
+  height:26px;border-radius:0 5px 5px 0;
+  transform-origin:left;transform:scaleX(0);
+}
+.card.in .fn-bar{animation:growX .8s cubic-bezier(.22,.61,.36,1) forwards;animation-delay:calc(var(--i,0) * 90ms)}
+.fn-val{width:112px;flex:none;font-size:13px;font-variant-numeric:tabular-nums;text-align:right;color:var(--ink)}
+.fn-conv{
+  margin-left:144px;font-size:11.5px;color:var(--ink-3);
+  display:flex;align-items:center;gap:6px;padding:1px 0;
+}
+.fn-conv::before{content:"";width:1px;height:11px;background:var(--axis);display:block;margin-left:5px}
+
+/* tables */
+.tbl-scroll{overflow-x:auto}
+table.data{border-collapse:collapse;width:100%;font-size:13px}
+table.data th,table.data td{
+  text-align:left;padding:7px 12px 7px 0;
+  border-bottom:1px solid var(--hair);white-space:nowrap;
+}
+table.data th{color:var(--ink-3);font-weight:500;font-size:12px}
+table.data td.num,table.data th.num{text-align:right;font-variant-numeric:tabular-nums;padding-right:0}
+table.data tbody tr:hover{background:var(--hover)}
+table.data td.wrap{white-space:normal;min-width:220px}
+
+/* key/value lists */
+.kv{display:grid;grid-template-columns:auto 1fr;gap:9px 18px;font-size:13.5px;align-items:baseline}
+.kv dt{color:var(--ink-3);font-size:12.5px}
+.kv dd{margin:0;color:var(--ink)}
+.rec-list{display:flex;flex-direction:column;gap:11px}
+.rec{display:flex;align-items:baseline;gap:12px;font-size:13.5px}
+.rec-v{font-weight:650;font-size:17px;letter-spacing:-.01em;min-width:78px;text-align:right;flex:none}
+.rec-l{color:var(--ink-2)}
+.rec-d{margin-left:auto;color:var(--ink-3);font-size:12.5px;white-space:nowrap}
+
+/* pills */
+.pills{display:flex;flex-wrap:wrap;gap:7px}
+.pill{
+  border:1px solid var(--hair);background:var(--plane);
+  border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--ink-2);
+}
+.quote{
+  border-left:2px solid var(--s1);padding:2px 0 2px 14px;
+  color:var(--ink);font-size:14.5px;line-height:1.55;
+}
+.prompt{margin-bottom:14px}
+.prompt-q{font-size:12.5px;color:var(--ink-3);margin-bottom:2px}
+.prompt-a{font-size:14.5px}
+
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.photo{
+  position:relative;aspect-ratio:3/4;border-radius:11px;overflow:hidden;
+  background:var(--plane);border:1px solid var(--hair);
+}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-fb{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:6px;text-align:center;
+  padding:10px;font-size:11.5px;color:var(--ink-3);
+}
+.photo-cap{
+  position:absolute;left:0;right:0;bottom:0;padding:14px 9px 7px;
+  background:linear-gradient(transparent, rgba(0,0,0,.72));
+  color:#fff;font-size:11px;
+}
+.artists{display:flex;flex-direction:column;gap:9px}
+.artist{display:flex;align-items:center;gap:11px;font-size:13.5px}
+.artist-rank{width:20px;color:var(--ink-3);font-size:12px;font-variant-numeric:tabular-nums;flex:none}
+.artist-img{width:34px;height:34px;border-radius:50%;object-fit:cover;background:var(--plane);flex:none}
+.artist-meter{flex:1;height:5px;border-radius:3px;background:var(--hover);overflow:hidden;min-width:40px}
+.artist-fill{height:100%;border-radius:3px;background:var(--s1);transform-origin:left;transform:scaleX(0)}
+.card.in .artist-fill{animation:growX .7s cubic-bezier(.22,.61,.36,1) forwards;animation-delay:calc(var(--i,0) * 45ms)}
+
+/* json tree */
+.json{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65}
+.json details{margin-left:11px;border-left:1px solid var(--hair);padding-left:10px}
+.json > details{margin-left:0;border-left:0;padding-left:0}
+.json summary{cursor:pointer;list-style:none;color:var(--ink-2);padding:1px 0}
+.json summary::-webkit-details-marker{display:none}
+.json summary::before{content:"▸";display:inline-block;width:13px;color:var(--ink-3);transition:transform .15s ease}
+.json details[open] > summary::before{transform:rotate(90deg)}
+.json .jk{color:var(--ink)}
+.json .jt{color:var(--ink-3);font-size:11.5px}
+.json .row{padding:1px 0 1px 13px}
+.json .jv-str{color:var(--good-text)}
+.json .jv-num{color:var(--s1)}
+.json .jv-bool{color:var(--s7)}
+.json .jv-null{color:var(--ink-3)}
+.json .jmore{color:var(--ink-3);padding-left:13px;font-style:italic}
+
+/* tooltip */
+.tip{
+  position:fixed;z-index:80;pointer-events:none;
+  background:var(--surface);border:1px solid var(--hair);
+  border-radius:10px;box-shadow:var(--shadow);
+  padding:9px 11px;font-size:12.5px;min-width:110px;
+  opacity:0;transform:translateY(4px);
+  transition:opacity .12s ease, transform .12s ease;
+}
+.tip.on{opacity:1;transform:none}
+.tip-title{font-size:11.5px;color:var(--ink-3);margin-bottom:5px}
+.tip-row{display:flex;align-items:center;gap:8px;padding:1.5px 0}
+.tip-key{width:14px;height:2px;border-radius:2px;flex:none}
+.tip-key.dia{width:8px;height:8px;transform:rotate(45deg);border-radius:2px}
+.tip-v{font-weight:650;font-variant-numeric:tabular-nums}
+.tip-n{color:var(--ink-2)}
+.tip-sep{border-top:1px solid var(--hair);margin:5px 0 4px}
+
+/* misc */
+.empty{
+  color:var(--ink-3);font-size:13.5px;padding:16px;text-align:center;
+  border:1px dashed var(--hair);border-radius:10px;
+}
+.note{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+footer.foot{
+  border-top:1px solid var(--hair);margin-top:20px;padding:24px 0 40px;
+  color:var(--ink-3);font-size:12.5px;
+}
+.hidden{display:none !important}
+
+@media (max-width:640px){
+  .fn-name{width:96px;font-size:12px}
+  .fn-val{width:88px;font-size:12px}
+  .fn-conv{margin-left:108px}
+  .hero{padding:34px 0 24px}
+  .kv{grid-template-columns:1fr;gap:2px 0}
+  .kv dd{margin-bottom:8px}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  .card,.tile{opacity:1;transform:none}
+  .an-col,.an-row,.fn-bar,.artist-fill{transform:none}
+  .an-line{stroke-dasharray:none;stroke-dashoffset:0}
+  .an-fade,.an-cell{opacity:1;transform:none}
+}
+@media print{
+  .topbar,.filters,.card-tools,.drop{display:none !important}
+  body{background:#fff}
+  .card,.tile{break-inside:avoid;box-shadow:none;opacity:1;transform:none}
+  /* Ohne das bleiben alle Balken auf scaleY(0) stehen und das PDF ist leer. */
+  .an-col,.an-row,.fn-bar,.artist-fill{transform:none !important}
+  .an-line{stroke-dasharray:none !important;stroke-dashoffset:0 !important}
+  .an-fade,.an-cell{opacity:1 !important;transform:none !important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap topbar-in">
+    <div class="brand">
+      <svg class="flame" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 2.2c.9 3.3-.7 5.3-2.4 6.9C7.5 11 5.4 12.9 5.4 16c0 3.7 3 6.6 6.6 6.6s6.6-2.9 6.6-6.6c0-2.6-1-4.3-2.4-6.2-.5 1-1.3 1.7-2.2 1.9.6-3.3-.6-6.9-1.9-9.5Z" fill="url(#fg)"/>
+        <defs><linearGradient id="fg" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#eb6834"/><stop offset="1" stop-color="#e34948"/>
+        </linearGradient></defs>
+      </svg>
+      <span>Tinder Data Report</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <button class="btn btn-ghost hidden" id="btn-print" title="Als PDF drucken">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M8 14h8v7H8z"/></svg>
+      <span>PDF</span>
+    </button>
+    <button class="btn btn-ghost hidden" id="btn-reset" title="Andere Datei laden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      <span>Neue Datei</span>
+    </button>
+    <button class="btn btn-ghost" id="btn-theme" title="Hell / dunkel umschalten" aria-label="Hell / dunkel umschalten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="intake" id="intake">
+  <div class="intake-inner">
+    <h1>Deine Tinderdaten,<br>ausgewertet.</h1>
+    <p class="lede">Lade die <code>data.json</code> aus deinem Datenexport von Tinder hoch (oder direkt die Zipdatei) und bekomme jede Zahl, die drinsteckt.</p>
+
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Datei auswählen">
+      <div class="drop-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" width="44" height="44">
+          <path d="M12 16V4m0 0 4 4m-4-4L8 8"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+        </svg>
+      </div>
+      <div class="drop-title">Datei hierher ziehen oder klicken</div>
+      <div class="drop-sub">data.json &nbsp;·&nbsp; myData.zip</div>
+    </div>
+    <input type="file" id="file" accept=".json,.zip,application/json,application/zip" class="hidden">
+
+    <div class="privacy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+      <span>Alles läuft lokal im Browser. Nichts wird hochgeladen.</span>
+    </div>
+
+    <div id="intake-err"></div>
+
+    <div class="hint-list">
+      <b>Woher bekomme ich die Datei?</b><br>
+      Tinder&nbsp;→ Einstellungen → „Kopie meiner Daten anfordern“. Du bekommst per Mail ein ZIP mit
+      <code>data.json</code> und <code>index.html</code>. Genau diese <code>data.json</code> gehört hier rein.
+    </div>
+  </div>
+</div>
+
+<main id="report" class="hidden"></main>
+<div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   0. Kleine Helfer
+   ============================================================ */
+const NBSP = " ";
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function el(tag, cls, txt){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (txt !== undefined && txt !== null) n.textContent = String(txt);
+  return n;
+}
+const SVGNS = "http://www.w3.org/2000/svg";
+function sv(tag, attrs){
+  const n = document.createElementNS(SVGNS, tag);
+  if (attrs) for (const k in attrs){
+    const v = attrs[k];
+    if (v === undefined || v === null) continue;
+    n.setAttribute(k, String(v));
+  }
+  return n;
+}
+function frag(){ return document.createDocumentFragment(); }
+
+const nf = new Intl.NumberFormat("de-DE");
+const nf1 = new Intl.NumberFormat("de-DE", {minimumFractionDigits:1, maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat("de-DE", {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtInt = n => nf.format(Math.round(n || 0));
+function fmtNum(n){
+  if (!isFinite(n)) return "k. A.";
+  if (Math.abs(n) >= 100) return fmtInt(n);
+  if (Math.abs(n) >= 10) return nf1.format(n);
+  return nf2.format(n);
+}
+function fmtPct(x, digits){
+  if (!isFinite(x)) return "k. A.";
+  if (x === 0) return "0" + NBSP + "%";
+  const d = digits === undefined ? 1 : digits;
+  return new Intl.NumberFormat("de-DE",{minimumFractionDigits:d, maximumFractionDigits:d}).format(x*100) + NBSP + "%";
+}
+function compact(n){
+  if (!isFinite(n)) return "k. A.";
+  const a = Math.abs(n);
+  if (a >= 1e6) return nf1.format(n/1e6) + "M";
+  if (a >= 1e4) return nf1.format(n/1e3) + "K";
+  return fmtInt(n);
+}
+function fmtDur(ms){
+  if (!isFinite(ms) || ms < 0) return "k. A.";
+  const m = ms/60000;
+  if (m < 1) return "< 1 Min.";
+  if (m < 60) return Math.round(m) + " Min.";
+  const h = m/60;
+  if (h < 24) return nf1.format(h) + " Std.";
+  const d = h/24;
+  if (d < 30) return nf1.format(d) + " Tage";
+  return nf1.format(d/30.44) + " Monate";
+}
+
+const WD = ["Mo","Di","Mi","Do","Fr","Sa","So"];
+const WD_LONG = ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"];
+const MON = ["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+
+function dkey(d){
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+}
+function parseKey(k){
+  const p = String(k).split("-");
+  return new Date(+p[0], +p[1]-1, +p[2]);
+}
+function isDateKey(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }
+function fmtDay(k){
+  const d = parseKey(k);
+  return d.getDate() + ". " + MON[d.getMonth()] + " " + d.getFullYear();
+}
+function fmtDayShort(k){
+  const d = parseKey(k);
+  return d.getDate() + ". " + MON[d.getMonth()];
+}
+function daysBetween(a, b){ return Math.round((parseKey(b) - parseKey(a)) / 86400000); }
+function addDays(k, n){
+  const d = parseKey(k); d.setDate(d.getDate()+n); return dkey(d);
+}
+function mondayOf(k){
+  const d = parseKey(k);
+  const off = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - off);
+  return dkey(d);
+}
+function isoWeekday(k){ return (parseKey(k).getDay() + 6) % 7; }  // 0 = Mo
+
+function sum(arr, f){ let s = 0; for (const x of arr) s += (f ? f(x) : x) || 0; return s; }
+function maxOf(arr, f){ let m = -Infinity; for (const x of arr){ const v = f ? f(x) : x; if (v > m) m = v; } return m === -Infinity ? 0 : m; }
+function median(arr){
+  if (!arr.length) return NaN;
+  const a = arr.slice().sort((x,y)=>x-y);
+  const m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m-1]+a[m])/2;
+}
+function niceMax(v){
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const base = Math.pow(10, exp);
+  const f = v / base;
+  const step = f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10;
+  return step * base;
+}
+function ticks(max, count){
+  const n = count || 4;
+  const out = [];
+  // Kleine Wertebereiche bekommen ganzzahlige Ticks, sonst stehen dort 0/0/1/1/1.
+  if (max <= n && Number.isInteger(max)){
+    for (let i = 0; i <= max; i++) out.push(i);
+    return out;
+  }
+  for (let i = 0; i <= n; i++) out.push(max * i / n);
+  return out;
+}
+function safeDiv(a, b){ return b ? a/b : NaN; }
+
+/* ============================================================
+   1. Datei einlesen (JSON direkt oder aus ZIP)
+   ============================================================ */
+async function readDropped(file){
+  const name = (file.name || "").toLowerCase();
+  if (name.endsWith(".zip")) return await readZip(file);
+  const text = await file.text();
+  return JSON.parse(stripBom(text));
+}
+function stripBom(t){ return t.charCodeAt(0) === 0xFEFF ? t.slice(1) : t; }
+
+async function readZip(file){
+  if (typeof DecompressionStream === "undefined")
+    throw new Error("Dein Browser kann Zipdateien hier nicht entpacken. Entpacke die ZIP und lade die data.json direkt hoch.");
+
+  const buf = await file.arrayBuffer();
+  const dv = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+
+  // End of Central Directory rückwärts suchen
+  let eocd = -1;
+  const min = Math.max(0, u8.length - 66000);
+  for (let i = u8.length - 22; i >= min; i--){
+    if (dv.getUint32(i, true) === 0x06054b50){ eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("Das sieht nicht nach einer gültigen Zipdatei aus.");
+
+  const count = dv.getUint16(eocd + 10, true);
+  let ptr = dv.getUint32(eocd + 16, true);
+  const dec = new TextDecoder();
+  const entries = [];
+
+  for (let i = 0; i < count; i++){
+    if (dv.getUint32(ptr, true) !== 0x02014b50) break;
+    const method   = dv.getUint16(ptr + 10, true);
+    const compSize = dv.getUint32(ptr + 20, true);
+    const nameLen  = dv.getUint16(ptr + 28, true);
+    const extraLen = dv.getUint16(ptr + 30, true);
+    const cmtLen   = dv.getUint16(ptr + 32, true);
+    const lho      = dv.getUint32(ptr + 42, true);
+    const name     = dec.decode(u8.subarray(ptr + 46, ptr + 46 + nameLen));
+    entries.push({name, method, compSize, lho});
+    ptr += 46 + nameLen + extraLen + cmtLen;
+  }
+
+  const hit = entries.find(e => /(^|\/)data\.json$/i.test(e.name))
+           || entries.find(e => /\.json$/i.test(e.name) && !/\/$/.test(e.name));
+  if (!hit) throw new Error("In der ZIP steckt keine data.json. Schau nach, ob du das richtige Archiv erwischt hast.");
+
+  // lokalen Header überspringen
+  if (dv.getUint32(hit.lho, true) !== 0x04034b50) throw new Error("ZIP beschädigt (Header nicht lesbar).");
+  const lnLen = dv.getUint16(hit.lho + 26, true);
+  const leLen = dv.getUint16(hit.lho + 28, true);
+  const start = hit.lho + 30 + lnLen + leLen;
+  const raw = u8.subarray(start, start + hit.compSize);
+
+  let bytes;
+  if (hit.method === 0){
+    bytes = raw;
+  } else if (hit.method === 8){
+    const ds = new DecompressionStream("deflate-raw");
+    const stream = new Blob([raw]).stream().pipeThrough(ds);
+    bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  } else {
+    throw new Error("Unbekanntes Kompressionsverfahren. Entpacke die Datei bitte manuell.");
+  }
+  return JSON.parse(stripBom(new TextDecoder().decode(bytes)));
+}
+
+/* ============================================================
+   2. Datenmodell
+   ============================================================ */
+const USAGE_SERIES = [
+  ["swipes_likes",      "likes"],
+  ["swipes_passes",     "passes"],
+  ["superlikes",        "superlikes"],
+  ["matches",           "matches"],
+  ["app_opens",         "opens"],
+  ["messages_sent",     "sent"],
+  ["messages_received", "recv"]
+];
+const HANDLED_TOP = new Set([
+  "Usage","Messages","User","Photos","Spotify","Purchases","Campaigns",
+  "ConversationFeedback","SocialGraph","Tailor","SwipeNotes","ReportContent",
+  "Experiences","ShareMyDate"
+]);
+
+function buildModel(raw){
+  const usage = raw.Usage || {};
+
+  // Alle Datumskeys über alle Serien hinweg einsammeln
+  const keySet = new Set();
+  for (const k in usage){
+    const s = usage[k];
+    if (!s || typeof s !== "object") continue;
+    for (const d in s) if (isDateKey(d)) keySet.add(d);
+  }
+  const keys = Array.from(keySet).sort();
+
+  // Zusätzliche numerische Tagesserien, die wir nicht fest kennen
+  const known = new Set(USAGE_SERIES.map(p => p[0]));
+  const extraSeries = [];
+  for (const k in usage){
+    if (known.has(k)) continue;
+    const s = usage[k];
+    if (!s || typeof s !== "object") continue;
+    const vals = Object.values(s);
+    if (vals.length && vals.every(v => typeof v === "number")) extraSeries.push(k);
+  }
+
+  const present = keys.map(k => {
+    const row = {key:k, wd:isoWeekday(k), present:true};
+    for (const [src, dst] of USAGE_SERIES){
+      const s = usage[src];
+      const v = s && typeof s[k] === "number" ? s[k] : 0;
+      row[dst] = v;
+    }
+    row.swipes = row.likes + row.passes;
+    row.msgs = row.sent + row.recv;
+    for (const ex of extraSeries){
+      row["x_" + ex] = typeof usage[ex][k] === "number" ? usage[ex][k] : 0;
+    }
+    return row;
+  });
+
+  // Tinder exportiert nur Tage, an denen etwas passiert ist. Für eine ehrliche
+  // Zeitachse füllen wir die Lücken mit Nullen auf.
+  const days = [];
+  if (keys.length){
+    const byKey = new Map(present.map(d => [d.key, d]));
+    const lastK = keys[keys.length - 1];
+    for (let k = keys[0]; k <= lastK; k = addDays(k, 1)){
+      const hit = byKey.get(k);
+      if (hit){ days.push(hit); continue; }
+      const row = {key:k, wd:isoWeekday(k), present:false,
+        likes:0, passes:0, superlikes:0, matches:0, opens:0, sent:0, recv:0, swipes:0, msgs:0};
+      for (const ex of extraSeries) row["x_" + ex] = 0;
+      days.push(row);
+    }
+  }
+
+  const conversations = buildConversations(raw.Messages);
+  const user = raw.User || {};
+
+  const extraTop = [];
+  for (const k in raw) if (!HANDLED_TOP.has(k)) extraTop.push(k);
+
+  return {
+    raw, user, days, extraSeries, conversations,
+    photos: Array.isArray(raw.Photos) ? raw.Photos : [],
+    spotify: raw.Spotify || null,
+    purchases: raw.Purchases || null,
+    extraTop,
+    firstKey: keys.length ? keys[0] : null,
+    lastKey: keys.length ? keys[keys.length-1] : null
+  };
+}
+
+/* --- Konversationen ------------------------------------------------------ */
+function buildConversations(msgSection){
+  if (!Array.isArray(msgSection)) return [];
+
+  // Wer bin ich? 'You' ist der Normalfall, sonst der Absender,
+  // der in den meisten Konversationen auftaucht.
+  const seen = new Map();
+  let hasYou = false;
+  for (const c of msgSection){
+    const inThis = new Set();
+    for (const m of (c && c.messages) || []){
+      const f = m && m.from;
+      if (f === undefined || f === null) continue;
+      if (String(f).toLowerCase() === "you") hasYou = true;
+      inThis.add(String(f));
+    }
+    for (const f of inThis) seen.set(f, (seen.get(f) || 0) + 1);
+  }
+  let meId = null;
+  if (!hasYou && seen.size){
+    let best = -1;
+    for (const [k, v] of seen) if (v > best){ best = v; meId = k; }
+  }
+  const isMine = m => {
+    const f = m.from === undefined ? null : String(m.from);
+    if (f !== null && f.toLowerCase() === "you") return true;
+    const t = m.to === undefined ? null : String(m.to);
+    if (t !== null && t.toLowerCase() === "you") return false;
+    if (meId !== null) return f === meId;
+    return false;
+  };
+
+  const out = [];
+  msgSection.forEach((c, idx) => {
+    const list = Array.isArray(c && c.messages) ? c.messages : [];
+    const msgs = list.map(m => {
+      const dt = m && m.sent_date ? new Date(m.sent_date) : null;
+      const ok = dt && !isNaN(dt.getTime());
+      const text = m && typeof m.message === "string" ? m.message : "";
+      return {
+        date: ok ? dt : null,
+        key: ok ? dkey(dt) : null,
+        hour: ok ? dt.getHours() : null,
+        wd: ok ? (dt.getDay()+6)%7 : null,
+        mine: isMine(m || {}),
+        text,
+        len: text.length,
+        words: text.trim() ? text.trim().split(/\s+/).length : 0
+      };
+    }).sort((a,b) => (a.date ? a.date.getTime() : 0) - (b.date ? b.date.getTime() : 0));
+
+    const dated = msgs.filter(m => m.date);
+    const mine = msgs.filter(m => m.mine);
+    const theirs = msgs.filter(m => !m.mine);
+
+    // Antwortzeiten: bei jedem Seitenwechsel
+    const replyMine = [], replyTheirs = [];
+    for (let i = 1; i < dated.length; i++){
+      const a = dated[i-1], b = dated[i];
+      if (a.mine === b.mine) continue;
+      const dt = b.date - a.date;
+      if (dt < 0) continue;
+      (b.mine ? replyMine : replyTheirs).push(dt);
+    }
+
+    out.push({
+      id: (c && c.match_id) ? String(c.match_id) : ("Match " + (idx+1)),
+      msgs, total: msgs.length,
+      sent: mine.length, recv: theirs.length,
+      first: dated.length ? dated[0].date : null,
+      firstKey: dated.length ? dated[0].key : null,
+      last: dated.length ? dated[dated.length-1].date : null,
+      lastKey: dated.length ? dated[dated.length-1].key : null,
+      spanDays: dated.length > 1 ? Math.max(1, Math.round((dated[dated.length-1].date - dated[0].date)/86400000) + 1) : (dated.length ? 1 : 0),
+      startedByMe: dated.length ? dated[0].mine : null,
+      endedByMe: dated.length ? dated[dated.length-1].mine : null,
+      ghosted: dated.length > 0 && dated[dated.length-1].mine && theirs.length === 0,
+      replyMine, replyTheirs,
+      chars: sum(msgs, m => m.len),
+      wordCount: sum(msgs, m => m.words)
+    });
+  });
+
+  return out.sort((a,b) => b.total - a.total);
+}
+
+/* --- Zeitraumausschnitt ------------------------------------------------- */
+function makeSlice(model, from, to){
+  const days = model.days.filter(d => d.key >= from && d.key <= to);
+  const t = {likes:0, passes:0, superlikes:0, matches:0, opens:0, sent:0, recv:0, swipes:0};
+  for (const d of days){
+    t.likes += d.likes; t.passes += d.passes; t.superlikes += d.superlikes;
+    t.matches += d.matches; t.opens += d.opens; t.sent += d.sent; t.recv += d.recv;
+    t.swipes += d.swipes;
+  }
+  const convs = model.conversations.filter(c => c.firstKey && c.firstKey >= from && c.firstKey <= to);
+  const msgs = [];
+  for (const c of model.conversations)
+    for (const m of c.msgs)
+      if (m.key && m.key >= from && m.key <= to) msgs.push(m);
+
+  const activeDays = days.filter(d => d.swipes > 0 || d.opens > 0);
+  return {
+    from, to, days, totals:t, convs, msgs, activeDays,
+    spanDays: Math.max(1, daysBetween(from, to) + 1)
+  };
+}
+
+/* ============================================================
+   3. Tooltip
+   ============================================================ */
+const tipEl = document.getElementById("tip");
+let tipOn = false;
+function showTip(x, y, build){
+  tipEl.replaceChildren();
+  build(tipEl);
+  tipEl.classList.add("on");
+  tipEl.setAttribute("aria-hidden","false");
+  tipOn = true;
+  positionTip(x, y);
+}
+function positionTip(x, y){
+  if (!tipOn) return;
+  const r = tipEl.getBoundingClientRect();
+  let left = x + 14, top = y - r.height - 12;
+  if (left + r.width > window.innerWidth - 8) left = x - r.width - 14;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 18;
+  tipEl.style.left = left + "px";
+  tipEl.style.top = top + "px";
+}
+function hideTip(){
+  tipOn = false;
+  tipEl.classList.remove("on");
+  tipEl.setAttribute("aria-hidden","true");
+}
+function tipTitle(node, text){ node.appendChild(el("div","tip-title", text)); }
+function tipRow(node, colorVar, name, value, dia){
+  const r = el("div","tip-row");
+  if (colorVar){
+    const k = el("span","tip-key" + (dia ? " dia" : ""));
+    k.style.background = colorVar;
+    r.appendChild(k);
+  }
+  r.appendChild(el("span","tip-v", value));
+  r.appendChild(el("span","tip-n", name));
+  node.appendChild(r);
+}
+function tipSep(node){ node.appendChild(el("div","tip-sep")); }
+
+/* ============================================================
+   4. Karten, Views, Reveal
+   ============================================================ */
+const revealIO = new IntersectionObserver(entries => {
+  for (const e of entries){
+    if (e.isIntersecting){ e.target.classList.add("in"); revealIO.unobserve(e.target); }
+  }
+}, {threshold:0.06, rootMargin:"0px 0px -40px 0px"});
+
+let resizeObservers = [];
+function clearObservers(){
+  for (const o of resizeObservers) o.disconnect();
+  resizeObservers = [];
+}
+
+function card(title, subtitle){
+  const c = el("section","card");
+  const head = el("div","card-head");
+  const box = el("div");
+  box.appendChild(el("h3", null, title));
+  if (subtitle) box.appendChild(el("p", null, subtitle));
+  head.appendChild(box);
+  const tools = el("div","card-tools");
+  head.appendChild(tools);
+  c.appendChild(head);
+  const body = el("div","card-body");
+  c.appendChild(body);
+  c.__tools = tools;
+  c.__body = body;
+  revealIO.observe(c);
+  return c;
+}
+
+/** Chart + Tabellenzwilling in einer Karte. */
+function chartCard(title, subtitle, drawFn, tableSpec){
+  const c = card(title, subtitle);
+  const chartView = el("div");
+  const host = el("div","chart-host");
+  chartView.appendChild(host);
+  c.__body.appendChild(chartView);
+
+  let tableView = null;
+  if (tableSpec){
+    tableView = el("div","hidden");
+    tableView.appendChild(renderTable(tableSpec.columns, tableSpec.rows));
+    c.__body.appendChild(tableView);
+
+    const bChart = el("button","tool","Diagramm");
+    const bTable = el("button","tool","Tabelle");
+    bChart.setAttribute("aria-pressed","true");
+    bTable.setAttribute("aria-pressed","false");
+    bChart.onclick = () => {
+      chartView.classList.remove("hidden"); tableView.classList.add("hidden");
+      bChart.setAttribute("aria-pressed","true"); bTable.setAttribute("aria-pressed","false");
+      redraw();
+    };
+    bTable.onclick = () => {
+      chartView.classList.add("hidden"); tableView.classList.remove("hidden");
+      bTable.setAttribute("aria-pressed","true"); bChart.setAttribute("aria-pressed","false");
+      hideTip();
+    };
+    c.__tools.appendChild(bChart);
+    c.__tools.appendChild(bTable);
+  }
+
+  let last = 0;
+  function redraw(){
+    const w = host.clientWidth;
+    if (!w || Math.abs(w - last) < 2) { if (!w) return; }
+    last = w;
+    const svg = drawFn(w);
+    if (svg) host.replaceChildren(svg);
+  }
+  const ro = new ResizeObserver(() => redraw());
+  ro.observe(host);
+  resizeObservers.push(ro);
+  requestAnimationFrame(redraw);
+
+  c.__redraw = redraw;
+  return c;
+}
+
+function renderTable(columns, rows){
+  const wrap = el("div","tbl-scroll");
+  const t = el("table","data");
+  const thead = el("thead");
+  const trh = el("tr");
+  columns.forEach(col => {
+    const th = el("th", col.num ? "num" : (col.wrap ? "wrap" : null), col.label);
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  t.appendChild(thead);
+  const tb = el("tbody");
+  rows.forEach(r => {
+    const tr = el("tr");
+    columns.forEach((col, i) => {
+      tr.appendChild(el("td", col.num ? "num" : (col.wrap ? "wrap" : null), r[i]));
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  wrap.appendChild(t);
+  return wrap;
+}
+
+function legend(items){
+  const l = el("div","legend");
+  items.forEach(it => {
+    const g = el("span","lg");
+    const k = el("span", "lg-" + (it.shape || "rect"));
+    k.style.background = it.color;
+    g.appendChild(k);
+    g.appendChild(el("span", null, it.label));
+    l.appendChild(g);
+  });
+  return l;
+}
+
+function statTile(opts){
+  const t = el("div","tile");
+  const lab = el("div","tile-label");
+  if (opts.dot){
+    const d = el("span","chip-dot");
+    d.style.background = opts.dot;
+    lab.appendChild(d);
+  }
+  lab.appendChild(el("span", null, opts.label));
+  t.appendChild(lab);
+
+  const v = el("div","tile-val");
+  const num = el("span", null, "0");
+  v.appendChild(num);
+  if (opts.unit) v.appendChild(el("small", null, opts.unit));
+  t.appendChild(v);
+
+  if (opts.spark){
+    const s = el("div","tile-spark");
+    s.appendChild(sparkline(opts.spark));
+    t.appendChild(s);
+  } else if (opts.sub){
+    t.appendChild(el("div","tile-sub", opts.sub));
+  }
+
+  const target = opts.value;
+  const fmt = opts.format || fmtInt;
+  trackCount(num, target, fmt);
+  const io = new IntersectionObserver(es => {
+    for (const e of es){
+      if (!e.isIntersecting) continue;
+      e.target.classList.add("in");
+      io.unobserve(e.target);
+      countUp(num, target, fmt);
+    }
+  }, {threshold:0.15});
+  io.observe(t);
+  return t;
+}
+
+let pendingCounts = [];
+/** Beim Drucken sind noch nicht sichtbare Kacheln nie hochgezählt worden. */
+function finalizeCounts(){
+  for (const c of pendingCounts) c.node.textContent = c.fmt(c.target);
+}
+function trackCount(node, target, fmt){ pendingCounts.push({node, target, fmt}); }
+function countUp(node, target, fmt){
+  if (!isFinite(target)){ node.textContent = fmt(target); return; }
+  if (reduced){ node.textContent = fmt(target); return; }
+  const dur = 900, t0 = performance.now();
+  function step(now){
+    const p = Math.min(1, (now - t0)/dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    node.textContent = fmt(target * e);
+    if (p < 1) requestAnimationFrame(step);
+    else node.textContent = fmt(target);
+  }
+  requestAnimationFrame(step);
+}
+
+function sparkline(values){
+  const W = 200, H = 30, pad = 3;
+  const svg = sv("svg", {viewBox:`0 0 ${W} ${H}`, preserveAspectRatio:"none", "aria-hidden":"true"});
+  const n = values.length;
+  if (n < 2) return svg;
+  const max = Math.max(1, maxOf(values));
+  const x = i => pad + (W - 2*pad) * i / (n - 1);
+  const y = v => H - pad - (H - 2*pad) * (v / max);
+  let d = "";
+  values.forEach((v,i) => { d += (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1); });
+  const p = sv("path", {d, fill:"none", "stroke-width":2, "stroke-linecap":"round", "stroke-linejoin":"round", class:"an-line", pathLength:1});
+  p.style.stroke = "var(--spark)";
+  svg.appendChild(p);
+  const dot = sv("circle", {cx:x(n-1).toFixed(1), cy:y(values[n-1]).toFixed(1), r:3, class:"an-fade"});
+  dot.style.fill = "var(--s1)";
+  dot.style.setProperty("--d",".9s");
+  svg.appendChild(dot);
+  return svg;
+}
+function bucketize(values, n){
+  if (!values.length) return [];
+  if (values.length <= n) return values.slice();
+  const out = [];
+  for (let i = 0; i < n; i++){
+    const a = Math.floor(values.length * i / n);
+    const b = Math.floor(values.length * (i+1) / n);
+    out.push(sum(values.slice(a, Math.max(b, a+1))));
+  }
+  return out;
+}
+
+/* ============================================================
+   5. Diagrammbausteine
+   ============================================================ */
+
+/** Gestapelte Säulen über die Zeit + Ereignismarker. */
+function drawStacked(w, buckets, series, opts){
+  const o = opts || {};
+  const H = o.height || 250;
+  const m = {l:46, r:14, t:14, b:26};
+  const iw = Math.max(40, w - m.l - m.r);
+  const ih = H - m.t - m.b;
+  const n = buckets.length;
+
+  const svg = sv("svg", {viewBox:`0 0 ${w} ${H}`, height:H, role:"img"});
+  if (!n) return svg;
+
+  const totals = buckets.map(b => sum(series, s => b[s.key] || 0));
+  const yMax = niceMax(maxOf(totals));
+  const band = iw / n;
+  const barW = Math.max(1, Math.min(24, band - (band > 6 ? 3 : 1)));
+  const yOf = v => m.t + ih - ih * (v / yMax);
+  const xOf = i => m.l + band * i + (band - barW)/2;
+
+  // Gitter
+  ticks(yMax, 4).forEach(t => {
+    const y = yOf(t);
+    svg.appendChild(sv("line", {x1:m.l, x2:m.l+iw, y1:y, y2:y, class: t === 0 ? "base-line" : "grid-line"}));
+    const lab = sv("text", {x:m.l-8, y:y+4, "text-anchor":"end", class:"axis-text tab"});
+    lab.textContent = compact(t);
+    svg.appendChild(lab);
+  });
+
+  // Hoverbänder
+  const bands = [];
+  for (let i = 0; i < n; i++){
+    const hb = sv("rect", {x:m.l + band*i, y:m.t, width:band, height:ih, class:"hover-band"});
+    svg.appendChild(hb);
+    bands.push(hb);
+  }
+
+  // Segmente (2px Flächenlücke zwischen den Stapeln)
+  const GAP = totals.some(t => t > 0) && barW > 3 ? 2 : 0;
+  buckets.forEach((b, i) => {
+    let acc = 0;
+    series.forEach((s, si) => {
+      const v = b[s.key] || 0;
+      if (v <= 0) return;
+      const y0 = yOf(acc), y1 = yOf(acc + v);
+      let h = Math.max(0.8, y0 - y1);
+      const isTop = si === series.length - 1 || !series.slice(si+1).some(x => (b[x.key]||0) > 0);
+      if (!isTop && h > GAP + 1) h -= GAP;
+      const r = sv("rect", {
+        x:xOf(i), y:y1 + (isTop ? 0 : GAP), width:barW, height:h,
+        rx: isTop ? Math.min(4, barW/2) : 0, class:"an-col"
+      });
+      r.style.fill = s.color;
+      r.style.setProperty("--i", Math.min(i, 90));
+      svg.appendChild(r);
+      acc += v;
+    });
+  });
+
+  // Ereignismarker fuer Tage mit Match, Annotation statt zweiter Achse
+  if (o.markers){
+    buckets.forEach((b, i) => {
+      const mv = b[o.markers.key] || 0;
+      if (mv <= 0) return;
+      const cx = m.l + band*i + band/2, cy = m.t + 5;
+      const d = sv("path", {
+        d:`M${cx} ${cy-4.5}L${cx+4.5} ${cy}L${cx} ${cy+4.5}L${cx-4.5} ${cy}Z`,
+        class:"an-fade dot-ring"
+      });
+      d.style.fill = o.markers.color;
+      d.style.setProperty("--d", (0.75 + Math.min(i,60)*0.006) + "s");
+      svg.appendChild(d);
+    });
+  }
+
+  // Beschriftung unten, ausgedünnt
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 78))));
+  buckets.forEach((b, i) => {
+    if (i % every !== 0 && i !== n-1) return;
+    if (i !== n-1 && (n-1 - i) < every*0.6) return;
+    const t = sv("text", {x:m.l + band*i + band/2, y:H-8, "text-anchor":"middle", class:"axis-text"});
+    t.textContent = b.short;
+    svg.appendChild(t);
+  });
+
+  // Trefferflächen
+  for (let i = 0; i < n; i++){
+    const hit = sv("rect", {x:m.l + band*i, y:m.t, width:band, height:ih, class:"hit"});
+    hit.addEventListener("pointerenter", () => bands[i].classList.add("on"));
+    hit.addEventListener("pointerleave", () => { bands[i].classList.remove("on"); hideTip(); });
+    hit.addEventListener("pointermove", ev => {
+      const b = buckets[i];
+      showTip(ev.clientX, ev.clientY, node => {
+        tipTitle(node, b.label);
+        series.forEach(s => tipRow(node, s.color, s.name, fmtInt(b[s.key] || 0)));
+        if (series.length > 1){
+          tipSep(node);
+          tipRow(node, null, "gesamt", fmtInt(totals[i]));
+        }
+        if (o.markers && (b[o.markers.key] || 0) > 0){
+          tipRow(node, o.markers.color, o.markers.name, fmtInt(b[o.markers.key]), true);
+        }
+        if (o.extraTip) o.extraTip(node, b);
+      });
+    });
+    svg.appendChild(hit);
+  }
+  return svg;
+}
+
+/** Einzelne Linie mit Fläche, Crosshair und Ø-Referenz. */
+function drawLine(w, points, opts){
+  const o = opts || {};
+  const H = o.height || 220;
+  const m = {l:46, r:16, t:14, b:26};
+  const iw = Math.max(40, w - m.l - m.r);
+  const ih = H - m.t - m.b;
+  const n = points.length;
+  const svg = sv("svg", {viewBox:`0 0 ${w} ${H}`, height:H, role:"img"});
+  if (n < 1) return svg;
+
+  const hasV = p => p && p.v !== null && p.v !== undefined && isFinite(p.v);
+  const yMax = o.yMax !== undefined ? o.yMax : niceMax(maxOf(points.filter(hasV).map(p => p.v)));
+  const xOf = i => n === 1 ? m.l + iw/2 : m.l + iw * i / (n-1);
+  const yOf = v => m.t + ih - ih * (v / (yMax || 1));
+
+  ticks(yMax, 4).forEach(t => {
+    const y = yOf(t);
+    svg.appendChild(sv("line", {x1:m.l, x2:m.l+iw, y1:y, y2:y, class: t === 0 ? "base-line" : "grid-line"}));
+    const lab = sv("text", {x:m.l-8, y:y+4, "text-anchor":"end", class:"axis-text tab"});
+    lab.textContent = o.fmtAxis ? o.fmtAxis(t) : compact(t);
+    svg.appendChild(lab);
+  });
+
+  // Ø-Referenzlinie
+  if (o.avg !== undefined && isFinite(o.avg) && o.avg > 0 && o.avg <= yMax){
+    const y = yOf(o.avg);
+    const ln = sv("line", {x1:m.l, x2:m.l+iw, y1:y, y2:y, class:"base-line an-fade"});
+    ln.style.setProperty("--d","1.1s");
+    svg.appendChild(ln);
+    const lb = sv("text", {x:m.l+iw, y:y-6, "text-anchor":"end", class:"axis-text an-fade"});
+    lb.style.setProperty("--d","1.1s");
+    lb.textContent = "Ø " + (o.fmtVal ? o.fmtVal(o.avg) : fmtNum(o.avg));
+    svg.appendChild(lb);
+  }
+
+  // Zusammenhängende Abschnitte, Lücken in den Daten bleiben Lücken.
+  const runs = [];
+  let run = null;
+  points.forEach((p, i) => {
+    if (!hasV(p)){ run = null; return; }
+    if (!run){ run = []; runs.push(run); }
+    run.push(i);
+  });
+
+  runs.forEach(r => {
+    if (r.length === 1){
+      const i = r[0];
+      const c = sv("circle", {cx:xOf(i), cy:yOf(points[i].v), r:3.5, class:"an-fade dot-ring"});
+      c.style.fill = o.color || "var(--s1)";
+      c.style.setProperty("--d",".6s");
+      svg.appendChild(c);
+      return;
+    }
+    let d = "";
+    r.forEach((i, j) => { d += (j ? "L" : "M") + xOf(i).toFixed(1) + " " + yOf(points[i].v).toFixed(1); });
+    const a = xOf(r[0]).toFixed(1), z = xOf(r[r.length-1]).toFixed(1), base = yOf(0).toFixed(1);
+    const area = sv("path", {d: d + `L${z} ${base}L${a} ${base}Z`, class:"an-fade"});
+    area.style.fill = o.color || "var(--s1)";
+    area.style.opacity = ".10";
+    area.style.setProperty("--d",".55s");
+    svg.appendChild(area);
+
+    const line = sv("path", {d, fill:"none", "stroke-width":2, "stroke-linejoin":"round", "stroke-linecap":"round", class:"an-line", pathLength:1});
+    line.style.stroke = o.color || "var(--s1)";
+    svg.appendChild(line);
+  });
+
+  // Endpunkt + Direktlabel
+  let lastIdx = -1;
+  for (let i = n-1; i >= 0; i--) if (hasV(points[i])){ lastIdx = i; break; }
+  if (lastIdx >= 0){
+    const lastP = points[lastIdx];
+    const dot = sv("circle", {cx:xOf(lastIdx), cy:yOf(lastP.v), r:4.5, class:"an-fade dot-ring"});
+    dot.style.fill = o.color || "var(--s1)";
+    dot.style.setProperty("--d","1.15s");
+    svg.appendChild(dot);
+    const dl = sv("text", {x:xOf(lastIdx) - 8, y:yOf(lastP.v) - 10, "text-anchor":"end", class:"axis-text an-fade"});
+    dl.style.setProperty("--d","1.2s");
+    dl.style.fill = "var(--ink)";
+    dl.textContent = o.fmtVal ? o.fmtVal(lastP.v) : fmtNum(lastP.v);
+    svg.appendChild(dl);
+  }
+
+  // Crosshair + Treffer
+  const cross = sv("line", {y1:m.t, y2:m.t+ih, class:"crosshair"});
+  svg.appendChild(cross);
+  const focus = sv("circle", {r:4.5, class:"crosshair dot-ring"});
+  focus.style.fill = o.color || "var(--s1)";
+  svg.appendChild(focus);
+
+  const hit = sv("rect", {x:m.l, y:m.t, width:iw, height:ih, class:"hit"});
+  hit.addEventListener("pointerleave", () => {
+    cross.classList.remove("on"); focus.classList.remove("on"); hideTip();
+  });
+  hit.addEventListener("pointermove", ev => {
+    const box = svg.getBoundingClientRect();
+    const scale = w / box.width;
+    const px = (ev.clientX - box.left) * scale;
+    let idx = n === 1 ? 0 : Math.round((px - m.l) / (iw / (n-1)));
+    idx = Math.max(0, Math.min(n-1, idx));
+    const p = points[idx];
+    cross.setAttribute("x1", xOf(idx)); cross.setAttribute("x2", xOf(idx));
+    cross.classList.add("on");
+    if (hasV(p)){
+      focus.setAttribute("cx", xOf(idx)); focus.setAttribute("cy", yOf(p.v));
+      focus.classList.add("on");
+    } else {
+      focus.classList.remove("on");
+    }
+    showTip(ev.clientX, ev.clientY, node => {
+      tipTitle(node, p.label);
+      if (hasV(p)) tipRow(node, o.color || "var(--s1)", o.name || "Wert", o.fmtVal ? o.fmtVal(p.v) : fmtNum(p.v));
+      else tipRow(node, null, o.emptyLabel || "keine Daten", "k. A.");
+      if (p.note) tipRow(node, null, p.note.name, p.note.value);
+    });
+  });
+  svg.appendChild(hit);
+
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 78))));
+  points.forEach((p,i) => {
+    if (i % every !== 0 && i !== n-1) return;
+    if (i !== n-1 && (n-1 - i) < every*0.6) return;
+    const t = sv("text", {x:xOf(i), y:H-8, "text-anchor":"middle", class:"axis-text"});
+    t.textContent = p.short;
+    svg.appendChild(t);
+  });
+  return svg;
+}
+
+/** Säulen, eine Serie. Direktlabel nur auf dem Maximum. */
+function drawColumns(w, items, opts){
+  const o = opts || {};
+  const H = o.height || 210;
+  const m = {l:44, r:14, t:22, b:26};
+  const iw = Math.max(40, w - m.l - m.r);
+  const ih = H - m.t - m.b;
+  const n = items.length;
+  const svg = sv("svg", {viewBox:`0 0 ${w} ${H}`, height:H, role:"img"});
+  if (!n) return svg;
+
+  const vmax = maxOf(items, d => d.v);
+  const yMax = niceMax(vmax);
+  const band = iw / n;
+  const barW = Math.max(2, Math.min(24, band - Math.min(10, band*0.34)));
+  const yOf = v => m.t + ih - ih * (v / yMax);
+
+  ticks(yMax, 4).forEach(t => {
+    const y = yOf(t);
+    svg.appendChild(sv("line", {x1:m.l, x2:m.l+iw, y1:y, y2:y, class: t === 0 ? "base-line" : "grid-line"}));
+    const lab = sv("text", {x:m.l-8, y:y+4, "text-anchor":"end", class:"axis-text tab"});
+    lab.textContent = o.fmtAxis ? o.fmtAxis(t) : compact(t);
+    svg.appendChild(lab);
+  });
+
+  items.forEach((d,i) => {
+    const x = m.l + band*i + (band - barW)/2;
+    const y = yOf(d.v), h = Math.max(d.v > 0 ? 1.5 : 0, m.t + ih - y);
+    if (h > 0){
+      const r = sv("rect", {x, y, width:barW, height:h, rx:Math.min(4, barW/2), class:"an-col"});
+      r.style.fill = o.color || "var(--s1)";
+      r.style.setProperty("--i", i);
+      svg.appendChild(r);
+    }
+    if (d.v === vmax && vmax > 0){
+      const t = sv("text", {x:x + barW/2, y:y - 7, "text-anchor":"middle", class:"axis-text an-fade tab"});
+      t.style.fill = "var(--ink)";
+      t.style.setProperty("--d",".8s");
+      t.textContent = o.fmtVal ? o.fmtVal(d.v) : fmtInt(d.v);
+      svg.appendChild(t);
+    }
+    const hb = sv("rect", {x:m.l + band*i, y:m.t, width:band, height:ih, class:"hover-band"});
+    svg.appendChild(hb);
+    const hit = sv("rect", {x:m.l + band*i, y:m.t, width:band, height:ih, class:"hit"});
+    hit.addEventListener("pointerenter", () => hb.classList.add("on"));
+    hit.addEventListener("pointerleave", () => { hb.classList.remove("on"); hideTip(); });
+    hit.addEventListener("pointermove", ev => showTip(ev.clientX, ev.clientY, node => {
+      tipTitle(node, d.long || d.label);
+      tipRow(node, o.color || "var(--s1)", o.name || "Wert", o.fmtVal ? o.fmtVal(d.v) : fmtInt(d.v));
+      if (d.sub) tipRow(node, null, d.sub.name, d.sub.value);
+    }));
+    svg.appendChild(hit);
+    const lb = sv("text", {x:m.l + band*i + band/2, y:H-8, "text-anchor":"middle", class:"axis-text"});
+    lb.textContent = d.label;
+    svg.appendChild(lb);
+  });
+  return svg;
+}
+
+/** Horizontale Balken, eine Serie, Wert an der Spitze. */
+function drawBarsH(w, items, opts){
+  const o = opts || {};
+  const rowH = o.rowH || 30;
+  const H = items.length * rowH + 8;
+  const labelW = o.labelW || 116;
+  const valW = 54;
+  const m = {l:labelW, r:valW, t:4, b:4};
+  const iw = Math.max(30, w - m.l - m.r);
+  const svg = sv("svg", {viewBox:`0 0 ${w} ${H}`, height:H, role:"img"});
+  if (!items.length) return svg;
+  const vmax = Math.max(1, maxOf(items, d => d.v));
+  const barH = Math.min(18, rowH - 12);
+
+  items.forEach((d,i) => {
+    const y = m.t + i*rowH;
+    const cy = y + rowH/2;
+    const lb = sv("text", {x:m.l - 10, y:cy + 4, "text-anchor":"end", class:"axis-text"});
+    lb.style.fill = "var(--ink-2)";
+    lb.textContent = d.label;
+    svg.appendChild(lb);
+
+    const bw = Math.max(d.v > 0 ? 2 : 0, iw * d.v / vmax);
+    if (bw > 0){
+      const r = sv("rect", {x:m.l, y:cy - barH/2, width:bw, height:barH, rx:Math.min(4, barH/2), class:"an-row"});
+      r.style.fill = o.color || "var(--s1)";
+      r.style.setProperty("--i", i);
+      svg.appendChild(r);
+    }
+    const vt = sv("text", {x:m.l + bw + 8, y:cy + 4, class:"axis-text an-fade tab"});
+    vt.style.fill = "var(--ink)";
+    vt.style.setProperty("--d", (0.55 + i*0.055) + "s");
+    vt.textContent = o.fmtVal ? o.fmtVal(d.v) : fmtInt(d.v);
+    svg.appendChild(vt);
+
+    const hb = sv("rect", {x:0, y:y, width:w, height:rowH, class:"hover-band"});
+    svg.appendChild(hb);
+    const hit = sv("rect", {x:0, y:y, width:w, height:rowH, class:"hit"});
+    hit.addEventListener("pointerenter", () => hb.classList.add("on"));
+    hit.addEventListener("pointerleave", () => { hb.classList.remove("on"); hideTip(); });
+    hit.addEventListener("pointermove", ev => showTip(ev.clientX, ev.clientY, node => {
+      tipTitle(node, d.long || d.label);
+      tipRow(node, o.color || "var(--s1)", o.name || "Anzahl", o.fmtVal ? o.fmtVal(d.v) : fmtInt(d.v));
+    }));
+    svg.appendChild(hit);
+  });
+  return svg;
+}
+
+/* --- Kalenderheatmap ---------------------------------------------------- */
+function heatmapBlock(days, opts){
+  const o = opts || {};
+  const byKey = new Map(days.map(d => [d.key, d]));
+  const valOf = o.valOf || (d => d.swipes);
+  const vals = days.map(valOf).filter(v => v > 0).sort((a,b) => a-b);
+
+  // Quantilschwellen -> 6 Stufen der sequenziellen Rampe
+  const q = p => vals.length ? vals[Math.min(vals.length-1, Math.floor(vals.length * p))] : 0;
+  const bounds = [q(.2), q(.4), q(.6), q(.8), q(.93)];
+  function levelOf(v){
+    if (!v) return 0;
+    for (let i = 0; i < bounds.length; i++) if (v <= bounds[i]) return i+1;
+    return 6;
+  }
+
+  const wrap = el("div");
+  if (!days.length){ wrap.appendChild(el("div","empty","Keine Tagesdaten im gewählten Zeitraum.")); return wrap; }
+
+  const years = [];
+  for (const d of days){
+    const y = +d.key.slice(0,4);
+    if (!years.includes(y)) years.push(y);
+  }
+  const firstKey = days[0].key, lastKey = days[days.length-1].key;
+
+  let cellIndex = 0;
+  years.forEach(year => {
+    const yStart = `${year}-01-01` < firstKey ? firstKey : `${year}-01-01`;
+    const yEnd   = `${year}-12-31` > lastKey ? lastKey : `${year}-12-31`;
+    const start = mondayOf(yStart);
+    const weeks = Math.floor(daysBetween(start, yEnd) / 7) + 1;
+
+    const block = el("div","hm-year");
+    block.appendChild(el("div","hm-year-label", String(year)));
+    const scroll = el("div","hm-scroll");
+
+    const CELL = 12, GAP = 3, LEFT = 26, TOP = 15;
+    const W = LEFT + weeks*(CELL+GAP);
+    const H = TOP + 7*(CELL+GAP);
+    const svg = sv("svg", {viewBox:`0 0 ${W} ${H}`, width:W, height:H, role:"img"});
+    svg.style.width = W + "px";
+    svg.style.maxWidth = "none";
+
+    [0,2,4].forEach(r => {
+      const t = sv("text", {x:0, y:TOP + r*(CELL+GAP) + CELL - 2, class:"axis-text"});
+      t.textContent = WD[r];
+      svg.appendChild(t);
+    });
+
+    let lastMonth = -1;
+    for (let wk = 0; wk < weeks; wk++){
+      const k = addDays(start, wk*7);
+      const mo = parseKey(k).getMonth();
+      if (mo !== lastMonth && parseKey(k).getDate() <= 7){
+        const t = sv("text", {x:LEFT + wk*(CELL+GAP), y:9, class:"axis-text"});
+        t.textContent = MON[mo];
+        svg.appendChild(t);
+        lastMonth = mo;
+      }
+    }
+
+    for (let wk = 0; wk < weeks; wk++){
+      for (let r = 0; r < 7; r++){
+        const k = addDays(start, wk*7 + r);
+        if (k < yStart || k > yEnd) continue;
+        const d = byKey.get(k);
+        const v = d ? valOf(d) : 0;
+        const lvl = levelOf(v);
+        const rect = sv("rect", {
+          x:LEFT + wk*(CELL+GAP), y:TOP + r*(CELL+GAP),
+          width:CELL, height:CELL, rx:3, class:"an-cell hm-cell"
+        });
+        rect.style.fill = `var(--heat-${lvl})`;
+        rect.style.setProperty("--i", Math.min(cellIndex++, 400));
+        rect.addEventListener("pointermove", ev => showTip(ev.clientX, ev.clientY, node => {
+          tipTitle(node, WD_LONG[isoWeekday(k)] + ", " + fmtDay(k));
+          if (!d || !d.present){ tipRow(node, null, "keine Aktivität", "k. A."); return; }
+          tipRow(node, "var(--s1)", "Likes", fmtInt(d.likes));
+          tipRow(node, "var(--s2)", "Nopes", fmtInt(d.passes));
+          tipSep(node);
+          tipRow(node, null, "Swipes", fmtInt(d.swipes));
+          if (d.opens) tipRow(node, null, "Appöffnungen", fmtInt(d.opens));
+          if (d.matches) tipRow(node, "var(--s3)", "Matches", fmtInt(d.matches), true);
+          if (d.superlikes) tipRow(node, null, "Superlikes", fmtInt(d.superlikes));
+        }));
+        rect.addEventListener("pointerleave", hideTip);
+        svg.appendChild(rect);
+      }
+    }
+    scroll.appendChild(svg);
+    block.appendChild(scroll);
+    wrap.appendChild(block);
+  });
+
+  const lg = el("div","hm-legend");
+  lg.appendChild(el("span", null, "weniger"));
+  for (let i = 0; i <= 6; i++){
+    const s = el("span","sw");
+    s.style.background = `var(--heat-${i})`;
+    lg.appendChild(s);
+  }
+  lg.appendChild(el("span", null, "mehr"));
+  const maxV = maxOf(days, valOf);
+  lg.appendChild(el("span", null, "· Spitzenwert " + fmtInt(maxV) + " Swipes/Tag"));
+  wrap.appendChild(lg);
+  return wrap;
+}
+
+/* --- Funnel -------------------------------------------------------------- */
+function funnelBlock(stages){
+  const wrap = el("div","funnel-row");
+  const base = Math.max(1, stages[0].v);
+  stages.forEach((s, i) => {
+    const line = el("div","fn-line");
+    line.appendChild(el("div","fn-name", s.name));
+    const track = el("div","fn-track");
+    const bar = el("div","fn-bar");
+    // Exakte Proportion; ein Wert > 0 behält 3px, damit er sichtbar bleibt,
+    // ohne eine Größe vorzutäuschen, die er nicht hat.
+    bar.style.width = (100 * s.v / base) + "%";
+    if (s.v > 0) bar.style.minWidth = "3px";
+    bar.style.background = `var(--ord-${Math.min(5, i+1)})`;
+    bar.style.setProperty("--i", i);
+    track.appendChild(bar);
+    line.appendChild(track);
+    const val = el("div","fn-val");
+    val.appendChild(el("span", null, fmtInt(s.v)));
+    line.appendChild(val);
+    wrap.appendChild(line);
+
+    if (i < stages.length - 1){
+      const nxt = stages[i+1];
+      const r = safeDiv(nxt.v, s.v);
+      const c = el("div","fn-conv");
+      c.appendChild(el("span", null,
+        isFinite(r) ? "↓ " + fmtPct(r, r < 0.01 ? 3 : 1) + " kommen weiter" : "↓ k. A."));
+      wrap.appendChild(c);
+    }
+  });
+  return wrap;
+}
+
+/* ============================================================
+   6. Wörter und Emojis
+   ============================================================ */
+const STOP = new Set(("der die das und ist ich du er sie es wir ihr mir dir mich dich nicht ein eine einen einem einer eines auch " +
+  "auf mit für von zu im in an am als aber wie was wer wo wann dass dann noch nur schon mal so wenn bei aus nach vor über " +
+  "um bin bist sind war warst hab habe hast hat haben hatte kann kannst können will willst wollen würde wäre werden wird " +
+  "mein meine dein deine sein ihre man mehr sehr ganz eher doch halt echt gut ja nein ok okay hey hallo servus moin " +
+  "the and you your for are was but not that this with have has had can will would there here they them his her its " +
+  "i a an of to in on it be me my do does did im ist's").split(/\s+/));
+
+function topWords(msgs, n){
+  const cnt = new Map();
+  for (const m of msgs){
+    if (!m.text) continue;
+    const words = m.text.toLowerCase()
+      .replace(/https?:\/\/\S+/g, " ")
+      .split(/[^a-zà-öø-ÿ0-9äöüß']+/i);
+    for (let wRaw of words){
+      const w = wRaw.replace(/^'+|'+$/g, "");
+      if (w.length < 3 || STOP.has(w) || /^\d+$/.test(w)) continue;
+      cnt.set(w, (cnt.get(w) || 0) + 1);
+    }
+  }
+  return Array.from(cnt.entries()).sort((a,b) => b[1]-a[1]).slice(0, n || 12);
+}
+function topEmoji(msgs, n){
+  const re = /\p{Extended_Pictographic}/gu;
+  const cnt = new Map();
+  for (const m of msgs){
+    if (!m.text) continue;
+    const found = m.text.match(re);
+    if (!found) continue;
+    for (const e of found) cnt.set(e, (cnt.get(e) || 0) + 1);
+  }
+  return Array.from(cnt.entries()).sort((a,b) => b[1]-a[1]).slice(0, n || 10);
+}
+
+/* ============================================================
+   7. JSON Baum
+   ============================================================ */
+function jsonNode(value, key, depth){
+  const isArr = Array.isArray(value);
+  const isObj = value && typeof value === "object" && !isArr;
+
+  if (!isArr && !isObj){
+    const row = el("div","row");
+    if (key !== null){
+      row.appendChild(el("span","jk", key + ": "));
+    }
+    let cls = "jv-null", txt = "null";
+    if (typeof value === "string"){ cls = "jv-str"; txt = '"' + value + '"'; }
+    else if (typeof value === "number"){ cls = "jv-num"; txt = String(value); }
+    else if (typeof value === "boolean"){ cls = "jv-bool"; txt = String(value); }
+    row.appendChild(el("span", cls, txt));
+    return row;
+  }
+
+  const entries = isArr ? value.map((v,i) => [String(i), v]) : Object.entries(value);
+  const d = el("details");
+  if (depth < 1 && entries.length <= 40) d.open = true;
+  const s = el("summary");
+  s.appendChild(el("span","jk", key === null ? "Daten" : key));
+  s.appendChild(el("span","jt", isArr ? `  [${entries.length}]` : `  {${entries.length}}`));
+  d.appendChild(s);
+
+  const LIMIT = 120;
+  entries.slice(0, LIMIT).forEach(([k, v]) => d.appendChild(jsonNode(v, k, depth+1)));
+  if (entries.length > LIMIT)
+    d.appendChild(el("div","jmore", `… ${entries.length - LIMIT} weitere Einträge`));
+  return d;
+}
+function jsonBlock(value, key){
+  const box = el("div","json");
+  box.appendChild(jsonNode(value, key === undefined ? null : key, 0));
+  return box;
+}
+function isEmptyish(v){
+  if (v === null || v === undefined) return true;
+  if (Array.isArray(v)) return v.length === 0;
+  if (typeof v === "object") return Object.keys(v).length === 0 || Object.values(v).every(isEmptyish);
+  if (typeof v === "string") return v.trim() === "";
+  return false;
+}
+
+/* ============================================================
+   8. Report
+   ============================================================ */
+const report = document.getElementById("report");
+const intake = document.getElementById("intake");
+let MODEL = null;
+let RANGE = {mode:"all", from:null, to:null};
+let GRAN = "auto";
+
+function block(title, sub){
+  const s = el("section","block");
+  const h = el("div","block-head");
+  h.appendChild(el("h2", null, title));
+  if (sub) h.appendChild(el("p", null, sub));
+  s.appendChild(h);
+  return s;
+}
+
+function render(){
+  clearObservers();
+  hideTip();
+  pendingCounts = [];
+  const m = MODEL;
+  const wrapAll = el("div");
+
+  /* ---- Zeitraum bestimmen ---- */
+  const first = m.firstKey, last = m.lastKey;
+  let from = first, to = last;
+  if (first && last){
+    if (RANGE.mode === "custom" && RANGE.from && RANGE.to){ from = RANGE.from; to = RANGE.to; }
+    else if (RANGE.mode !== "all"){
+      const n = +RANGE.mode;
+      to = last; from = addDays(last, -(n-1));
+      if (from < first) from = first;
+    }
+  }
+  const S = (first && last) ? makeSlice(m, from, to) : makeSlice(m, "0000-01-01", "9999-12-31");
+
+  /* ---- Hero ---- */
+  wrapAll.appendChild(renderHero(m, S));
+
+  /* ---- Filterzeile: skopiert alles darunter ---- */
+  if (first && last) wrapAll.appendChild(renderFilters(m, from, to));
+
+  const main = el("div","wrap");
+  wrapAll.appendChild(main);
+
+  if (!m.days.length){
+    const w = el("div","empty");
+    w.textContent = "In dieser Datei stecken keine Nutzungsdaten (Usage). Profil und Rohdaten findest du weiter unten.";
+    main.appendChild(w);
+  } else {
+    main.appendChild(renderKpis(m, S));
+    main.appendChild(renderFunnelBlock(m, S));
+    main.appendChild(renderActivity(m, S));
+    main.appendChild(renderRhythm(m, S));
+  }
+  main.appendChild(renderMessages(m, S));
+  main.appendChild(renderProfile(m));
+  main.appendChild(renderMedia(m));
+  main.appendChild(renderRest(m));
+
+  const foot = el("footer","foot");
+  const fw = el("div","wrap");
+  fw.appendChild(el("div", null,
+    "Ausgewertet am " + new Date().toLocaleDateString("de-DE", {day:"numeric", month:"long", year:"numeric"}) +
+    " · Alle Zahlen stammen direkt aus deiner data.json. Es wurde nichts hochgeladen."));
+  foot.appendChild(fw);
+  wrapAll.appendChild(foot);
+
+  report.replaceChildren(wrapAll);
+}
+
+/* ---- Hero --------------------------------------------------------------- */
+function renderHero(m, S){
+  const sec = el("section","hero");
+  const inner = el("div","wrap hero-in");
+  const u = m.user || {};
+
+  const name = typeof u.name === "string" && u.name ? u.name : null;
+  sec.appendChild(inner);
+
+  const created = u.create_date ? new Date(u.create_date) : null;
+  const active = u.active_time ? new Date(u.active_time) : null;
+  const daysOn = created ? Math.max(1, Math.round(((active || new Date()) - created)/86400000)) : null;
+
+  inner.appendChild(el("div","eyebrow",
+    (name ? name + " · " : "") +
+    (m.firstKey ? fmtDay(m.firstKey) + " bis " + fmtDay(m.lastKey) : "Datenexport von Tinder")));
+
+  const fig = el("h1","hero-fig", "0");
+  inner.appendChild(fig);
+
+  const total = S.totals.swipes;
+  inner.appendChild(el("p","hero-cap",
+    total
+      ? "Swipes insgesamt" + (S.days.length ? ", verteilt auf " + fmtInt(S.activeDays.length) + " Tage mit Aktivität." : ".")
+      : "Swipes im gewählten Zeitraum."));
+
+  const chips = el("div","chips");
+  function chip(label, value, color){
+    const c = el("span","chip");
+    if (color){ const d = el("span","chip-dot"); d.style.background = color; c.appendChild(d); }
+    c.appendChild(el("span", null, label + " "));
+    c.appendChild(el("b", null, value));
+    chips.appendChild(c);
+  }
+  chip("Likes", fmtInt(S.totals.likes), "var(--s1)");
+  chip("Nopes", fmtInt(S.totals.passes), "var(--s2)");
+  chip("Matches", fmtInt(S.totals.matches), "var(--s3)");
+  if (daysOn !== null) chip("Dabei seit", fmtInt(daysOn) + " Tagen");
+  if (active) chip("Zuletzt aktiv", active.toLocaleDateString("de-DE",{day:"numeric",month:"short",year:"numeric"}));
+  inner.appendChild(chips);
+
+  trackCount(fig, total, fmtInt);
+  countUp(fig, total, fmtInt);
+  return sec;
+}
+
+/* ---- Filter ------------------------------------------------------------- */
+function renderFilters(m, from, to){
+  const bar = el("div","filters");
+  const inner = el("div","wrap filters-in");
+  inner.appendChild(el("span","flabel","Zeitraum"));
+
+  const seg = el("div","segbar");
+  const opts = [["all","Gesamt"],["30","30 Tage"],["90","90 Tage"],["365","1 Jahr"]];
+  opts.forEach(([v, lab]) => {
+    const b = el("button","seg", lab);
+    b.setAttribute("aria-pressed", String(RANGE.mode === v));
+    b.onclick = () => { RANGE = {mode:v, from:null, to:null}; render(); };
+    seg.appendChild(b);
+  });
+  inner.appendChild(seg);
+
+  const d1 = el("input"); d1.type = "date"; d1.value = from; d1.min = m.firstKey; d1.max = m.lastKey;
+  const d2 = el("input"); d2.type = "date"; d2.value = to;   d2.min = m.firstKey; d2.max = m.lastKey;
+  d1.setAttribute("aria-label","Von");
+  d2.setAttribute("aria-label","Bis");
+  const apply = () => {
+    if (!d1.value || !d2.value) return;
+    const a = d1.value <= d2.value ? d1.value : d2.value;
+    const b = d1.value <= d2.value ? d2.value : d1.value;
+    RANGE = {mode:"custom", from:a, to:b};
+    render();
+  };
+  d1.onchange = apply; d2.onchange = apply;
+  inner.appendChild(d1);
+  inner.appendChild(el("span","flabel","bis"));
+  inner.appendChild(d2);
+
+  const span = daysBetween(from, to) + 1;
+  inner.appendChild(el("span","range-note", fmtInt(span) + " Tage im Blick"));
+
+  bar.appendChild(inner);
+  return bar;
+}
+
+/* ---- KPIs --------------------------------------------------------------- */
+function renderKpis(m, S){
+  const b = block("Die Kennzahlen", "Alles im gewählten Zeitraum.");
+  const g = el("div","grid g-kpi");
+  const t = S.totals;
+  const dayVals = k => S.days.map(d => d[k]);
+
+  g.appendChild(statTile({label:"Swipes gesamt", value:t.swipes, spark:bucketize(dayVals("swipes"), 14)}));
+  g.appendChild(statTile({label:"Likes", dot:"var(--s1)", value:t.likes, spark:bucketize(dayVals("likes"), 14)}));
+  g.appendChild(statTile({label:"Nopes", dot:"var(--s2)", value:t.passes, spark:bucketize(dayVals("passes"), 14)}));
+  g.appendChild(statTile({
+    label:"Likequote", value:safeDiv(t.likes, t.swipes)*100, format:v => nf1.format(v), unit:"%",
+    sub:"von allen Swipes ein Like"
+  }));
+  g.appendChild(statTile({label:"Matches", dot:"var(--s3)", value:t.matches,
+    sub: t.matches ? "an " + fmtInt(S.days.filter(d => d.matches>0).length) + " verschiedenen Tagen" : "keine im Zeitraum"}));
+  g.appendChild(statTile({
+    label:"Matchquote", value:safeDiv(t.matches, t.likes)*100,
+    format:v => isFinite(v) ? nf2.format(v) : "k. A.", unit:"%",
+    sub:"deiner Likes wurden erwidert"
+  }));
+  g.appendChild(statTile({
+    label:"Likes pro Match", value:safeDiv(t.likes, t.matches),
+    format:v => isFinite(v) ? fmtInt(v) : "k. A.",
+    sub: t.matches ? "so viele Likes kostet ein Match" : "kein Match im Zeitraum"
+  }));
+  g.appendChild(statTile({label:"Appöffnungen", value:t.opens, spark:bucketize(dayVals("opens"), 14)}));
+  g.appendChild(statTile({
+    label:"Swipes pro aktivem Tag", value:safeDiv(t.swipes, S.activeDays.length),
+    format:v => isFinite(v) ? fmtInt(v) : "k. A.",
+    sub: fmtInt(S.activeDays.length) + " von " + fmtInt(S.spanDays) + " Tagen aktiv"
+  }));
+  g.appendChild(statTile({label:"Superlikes", dot:"var(--s4)", value:t.superlikes,
+    sub: t.superlikes ? "vergeben" : "keine vergeben"}));
+  g.appendChild(statTile({label:"Nachrichten geschrieben", value:t.sent,
+    sub: t.recv ? fmtInt(t.recv) + " empfangen" : "keine Antwort erhalten"}));
+  g.appendChild(statTile({
+    label:"Nopes pro Like", value:safeDiv(t.passes, t.likes),
+    format:v => isFinite(v) ? fmtNum(v) : "k. A.",
+    sub:"so wählerisch bist du"
+  }));
+
+  b.appendChild(g);
+  return b;
+}
+
+/* ---- Funnel ------------------------------------------------------------- */
+function renderFunnelBlock(m, S){
+  const t = S.totals;
+  const convsWithMsg = S.convs.filter(c => c.total > 0).length;
+  const convsWithReply = S.convs.filter(c => c.recv > 0).length;
+  const stages = [
+    {name:"Swipes",            v:t.swipes},
+    {name:"Likes",             v:t.likes},
+    {name:"Matches",           v:t.matches},
+    {name:"Chats gestartet",   v:convsWithMsg},
+    {name:"Antwort bekommen",  v:convsWithReply}
+  ];
+
+  const b = block("Von Swipe zu Gespräch", "Wie viel von ganz oben unten ankommt.");
+  const c = card("Funnel", "Balkenlänge relativ zur ersten Stufe.");
+  c.__body.appendChild(funnelBlock(stages));
+
+  let note;
+  if (!t.swipes) note = "Für diesen Zeitraum liegen keine Swipes vor.";
+  else if (!convsWithReply) note = "Unterm Strich: aus " + fmtInt(t.swipes) +
+    " Swipes wurde kein einziges Gespräch mit Antwort.";
+  else note = "Unterm Strich: aus " + fmtInt(t.swipes) + " Swipes wurden " + fmtInt(convsWithReply) +
+    " Gespräche mit Antwort, das sind " + fmtPct(safeDiv(convsWithReply, t.swipes), 4) + ".";
+  c.__body.appendChild(el("p","note", note));
+
+  const tbl = renderTable(
+    [{label:"Stufe"},{label:"Anzahl",num:true},{label:"Anteil an Swipes",num:true},{label:"Übergang zur nächsten Stufe",num:true}],
+    stages.map((s,i) => [
+      s.name, fmtInt(s.v),
+      isFinite(safeDiv(s.v, stages[0].v)) ? fmtPct(safeDiv(s.v, stages[0].v), 3) : "k. A.",
+      i < stages.length-1 && isFinite(safeDiv(stages[i+1].v, s.v)) ? fmtPct(safeDiv(stages[i+1].v, s.v), 2) : "k. A."
+    ])
+  );
+  const bt = el("button","tool","Tabelle");
+  const wrapT = el("div","hidden");
+  wrapT.appendChild(tbl);
+  c.__body.appendChild(wrapT);
+  bt.onclick = () => {
+    const open = wrapT.classList.toggle("hidden");
+    bt.setAttribute("aria-pressed", String(!open));
+  };
+  c.__tools.appendChild(bt);
+
+  b.appendChild(c);
+  return b;
+}
+
+/* ---- Aktivität ---------------------------------------------------------- */
+function bucketsFor(days, gran){
+  const map = new Map();
+  const order = [];
+  for (const d of days){
+    let key, label, short;
+    if (gran === "day"){
+      key = d.key; label = WD_LONG[d.wd] + ", " + fmtDay(d.key); short = fmtDayShort(d.key);
+    } else if (gran === "week"){
+      key = mondayOf(d.key);
+      label = "Woche ab " + fmtDay(key); short = fmtDayShort(key);
+    } else {
+      key = d.key.slice(0,7);
+      const mo = +key.slice(5,7) - 1;
+      label = MON[mo] + " " + key.slice(0,4); short = MON[mo] + (mo === 0 ? " " + key.slice(2,4) : "");
+    }
+    let b = map.get(key);
+    if (!b){
+      b = {key, label, short, likes:0, passes:0, superlikes:0, matches:0, opens:0, sent:0, recv:0, swipes:0, days:0};
+      map.set(key, b); order.push(key);
+    }
+    b.likes += d.likes; b.passes += d.passes; b.superlikes += d.superlikes;
+    b.matches += d.matches; b.opens += d.opens; b.sent += d.sent; b.recv += d.recv;
+    b.swipes += d.swipes; b.days++;
+  }
+  return order.map(k => map.get(k));
+}
+function autoGran(n){ return n <= 70 ? "day" : n <= 1100 ? "week" : "month"; }
+
+function renderActivity(m, S){
+  const b = block("Aktivität über die Zeit", "Wann du gewischt hast und wie viel.");
+
+  const g = GRAN === "auto" ? autoGran(S.days.length) : GRAN;
+  const buckets = bucketsFor(S.days, g);
+  const series = [
+    {key:"likes",  name:"Likes", color:"var(--s1)"},
+    {key:"passes", name:"Nopes", color:"var(--s2)"}
+  ];
+
+  const cA = chartCard(
+    "Likes und Nopes",
+    g === "day" ? "Pro Tag." : g === "week" ? "Pro Woche (Montag bis Sonntag)." : "Pro Monat.",
+    w => drawStacked(w, buckets, series, {
+      height: 270,
+      markers: {key:"matches", name:"Matches", color:"var(--s3)"}
+    }),
+    {
+      columns:[{label:"Zeitraum"},{label:"Likes",num:true},{label:"Nopes",num:true},{label:"Swipes",num:true},{label:"Matches",num:true},{label:"Appöffnungen",num:true}],
+      rows: buckets.map(x => [x.label, fmtInt(x.likes), fmtInt(x.passes), fmtInt(x.swipes), fmtInt(x.matches), fmtInt(x.opens)])
+    }
+  );
+  cA.__body.insertBefore(legend([
+    {color:"var(--s1)", label:"Likes"},
+    {color:"var(--s2)", label:"Nopes"},
+    {color:"var(--s3)", label:"Tag mit Match", shape:"dia"}
+  ]), cA.__body.firstChild);
+
+  const seg = el("div","segbar");
+  [["auto","Auto"],["day","Tag"],["week","Woche"],["month","Monat"]].forEach(([v,lab]) => {
+    const bt = el("button","seg", lab);
+    bt.setAttribute("aria-pressed", String(GRAN === v));
+    bt.onclick = () => { GRAN = v; render(); };
+    seg.appendChild(bt);
+  });
+  cA.__tools.insertBefore(seg, cA.__tools.firstChild);
+  b.appendChild(cA);
+
+  // Likequote im Verlauf, Zeiträume ohne nennenswerte Aktivität bleiben Lücken
+  const MIN_SW = 3;
+  const lrPts = buckets.map(x => ({
+    label:x.label, short:x.short,
+    v: x.swipes >= MIN_SW ? 100 * x.likes / x.swipes : null,
+    note:{name:"Swipes", value:fmtInt(x.swipes)}
+  }));
+  const lrVals = lrPts.filter(p => p.v !== null).map(p => p.v);
+  const grid = el("div","grid g-2");
+  grid.style.marginTop = "14px";
+
+  if (lrVals.length >= 2){
+    const avg = 100 * safeDiv(S.totals.likes, S.totals.swipes);
+    const cB = chartCard("Likequote im Verlauf",
+      "Anteil Likes an allen Swipes. Zeiträume mit weniger als " + MIN_SW + " Swipes bleiben leer.",
+      w => drawLine(w, lrPts, {
+        height:230, name:"Likequote",
+        yMax: Math.min(100, niceMax(maxOf(lrVals))),
+        fmtVal: v => nf1.format(v) + NBSP + "%",
+        fmtAxis: v => nf.format(Math.round(v)) + "%",
+        emptyLabel: "zu wenige Swipes",
+        avg
+      }),
+      {
+        columns:[{label:"Zeitraum"},{label:"Swipes",num:true},{label:"Likes",num:true},{label:"Likequote",num:true}],
+        rows: buckets.map(x => [x.label, fmtInt(x.swipes), fmtInt(x.likes),
+          x.swipes >= MIN_SW ? fmtPct(x.likes/x.swipes) : "k. A."])
+      });
+    grid.appendChild(cB);
+  }
+
+  // Appöffnungen
+  const openPts = buckets.map(x => ({label:x.label, short:x.short, v:x.opens}));
+  if (sum(openPts, p => p.v) > 0){
+    const cC = chartCard("Appöffnungen", "Wie oft du Tinder aufgemacht hast.",
+      w => drawLine(w, openPts, {height:230, name:"Öffnungen", color:"var(--s7)", fmtVal:fmtInt}),
+      {
+        columns:[{label:"Zeitraum"},{label:"Appöffnungen",num:true},{label:"Swipes pro Öffnung",num:true}],
+        rows: buckets.map(x => [x.label, fmtInt(x.opens), x.opens ? fmtNum(x.swipes/x.opens) : "k. A."])
+      });
+    grid.appendChild(cC);
+  }
+  if (grid.children.length) b.appendChild(grid);
+
+  // Heatmap
+  const cH = card("Swipekalender", "Ein Kästchen pro Tag. Je dunkler, desto mehr Swipes.");
+  cH.__body.appendChild(heatmapBlock(S.days));
+  const heatWrap = el("div","hidden");
+  const byMonth = bucketsFor(S.days, "month");
+  heatWrap.appendChild(renderTable(
+    [{label:"Monat"},{label:"Tage mit Daten",num:true},{label:"Swipes",num:true},{label:"Ø pro Tag",num:true},{label:"Bester Tag",num:true}],
+    byMonth.map(x => {
+      const inM = S.days.filter(d => d.key.slice(0,7) === x.key);
+      const best = inM.reduce((a,c) => c.swipes > (a ? a.swipes : -1) ? c : a, null);
+      return [x.label, fmtInt(x.days), fmtInt(x.swipes), fmtNum(x.swipes/Math.max(1,x.days)),
+              best && best.swipes ? fmtInt(best.swipes) + " (" + fmtDayShort(best.key) + ")" : "k. A."];
+    })
+  ));
+  cH.__body.appendChild(heatWrap);
+  const bt = el("button","tool","Tabelle");
+  bt.onclick = () => { const hidden = heatWrap.classList.toggle("hidden"); bt.setAttribute("aria-pressed", String(!hidden)); };
+  cH.__tools.appendChild(bt);
+  const hb = el("div"); hb.style.marginTop = "14px"; hb.appendChild(cH);
+  b.appendChild(hb);
+
+  return b;
+}
+
+/* ---- Rhythmus & Rekorde ------------------------------------------------- */
+function renderRhythm(m, S){
+  const b = block("Muster und Rekorde", "Dein Swipeverhalten von der Seite betrachtet.");
+  const g = el("div","grid g-2");
+
+  // Wochentage
+  const wdData = WD.map((lab, i) => {
+    const ds = S.days.filter(d => d.wd === i);
+    const sw = sum(ds, d => d.swipes);
+    const lk = sum(ds, d => d.likes);
+    return {
+      label:lab, long:WD_LONG[i], v:sw,
+      sub:{name:"Likequote", value: sw ? fmtPct(lk/sw) : "k. A."},
+      likes:lk, days:ds.length
+    };
+  });
+  const cW = chartCard("Swipes nach Wochentag", "Summiert über den gewählten Zeitraum.",
+    w => drawColumns(w, wdData, {height:215, name:"Swipes"}),
+    {
+      columns:[{label:"Wochentag"},{label:"Swipes",num:true},{label:"Likes",num:true},{label:"Likequote",num:true},{label:"Ø pro Tag",num:true}],
+      rows: wdData.map(d => [d.long, fmtInt(d.v), fmtInt(d.likes),
+        d.v ? fmtPct(d.likes/d.v) : "k. A.", d.days ? fmtNum(d.v/d.days) : "k. A."])
+    });
+  g.appendChild(cW);
+
+  // Rekorde
+  const cR = card("Rekorde", "Die Ausreißer im Zeitraum.");
+  const list = el("div","rec-list");
+  function rec(value, label, detail){
+    const r = el("div","rec");
+    r.appendChild(el("div","rec-v", value));
+    r.appendChild(el("div","rec-l", label));
+    if (detail) r.appendChild(el("div","rec-d", detail));
+    list.appendChild(r);
+  }
+  const days = S.days;
+  const best = days.reduce((a,c) => c.swipes > (a ? a.swipes : -1) ? c : a, null);
+  const bestLikes = days.reduce((a,c) => c.likes > (a ? a.likes : -1) ? c : a, null);
+  const bestOpens = days.reduce((a,c) => c.opens > (a ? a.opens : -1) ? c : a, null);
+
+  if (best && best.swipes) rec(fmtInt(best.swipes), "Swipes am stärksten Tag", fmtDay(best.key));
+  if (bestLikes && bestLikes.likes) rec(fmtInt(bestLikes.likes), "Likes an einem Tag", fmtDay(bestLikes.key));
+  if (bestOpens && bestOpens.opens) rec(fmtInt(bestOpens.opens), "Appöffnungen an einem Tag", fmtDay(bestOpens.key));
+
+  // Streaks
+  let cur = 0, bestStreak = 0, streakEnd = null, prev = null;
+  for (const d of days){
+    const act = d.swipes > 0 || d.opens > 0;
+    if (act && prev && daysBetween(prev, d.key) === 1) cur++;
+    else if (act) cur = 1;
+    else cur = 0;
+    if (act) prev = d.key;
+    if (cur > bestStreak){ bestStreak = cur; streakEnd = d.key; }
+  }
+  if (bestStreak) rec(fmtInt(bestStreak), "Tage Aktivität am Stück",
+    streakEnd ? "bis " + fmtDay(streakEnd) : "");
+
+  // längste Pause
+  let gapMax = 0, gapFrom = null, gapTo = null;
+  const act = days.filter(d => d.swipes > 0 || d.opens > 0);
+  for (let i = 1; i < act.length; i++){
+    const gp = daysBetween(act[i-1].key, act[i].key) - 1;
+    if (gp > gapMax){ gapMax = gp; gapFrom = act[i-1].key; gapTo = act[i].key; }
+  }
+  if (gapMax > 0) rec(fmtInt(gapMax), "Tage längste Pause",
+    fmtDayShort(gapFrom) + " bis " + fmtDayShort(gapTo));
+
+  const matchDays = days.filter(d => d.matches > 0);
+  if (matchDays.length){
+    rec(fmtInt(sum(matchDays, d => d.matches)), "Matches insgesamt",
+      matchDays.map(d => fmtDayShort(d.key)).slice(0,4).join(", ") + (matchDays.length > 4 ? " …" : ""));
+  }
+  const slDays = days.filter(d => d.superlikes > 0);
+  if (slDays.length) rec(fmtInt(sum(slDays, d => d.superlikes)), "Superlikes",
+    slDays.map(d => fmtDayShort(d.key)).slice(0,3).join(", "));
+
+  if (!list.children.length) list.appendChild(el("div","empty","Keine Ausreißer im Zeitraum."));
+  cR.__body.appendChild(list);
+  g.appendChild(cR);
+
+  b.appendChild(g);
+
+  // Zusätzliche Serien aus Usage, die Tinder mitliefert
+  const numericExtras = m.extraSeries.filter(k => {
+    return S.days.some(d => (d["x_" + k] || 0) > 0);
+  });
+  if (numericExtras.length){
+    const c = card("Weitere Tageswerte", "Zusätzliche Zeitreihen aus dem Abschnitt „Usage“.");
+    const g2 = el("div","grid g-3");
+    numericExtras.forEach(k => {
+      g2.appendChild(statTile({label:k, value:sum(S.days, d => d["x_"+k] || 0),
+        spark:bucketize(S.days.map(d => d["x_"+k] || 0), 14)}));
+    });
+    c.__body.appendChild(g2);
+    const w = el("div"); w.style.marginTop = "14px"; w.appendChild(c);
+    b.appendChild(w);
+  }
+  return b;
+}
+
+/* ---- Nachrichten -------------------------------------------------------- */
+function renderMessages(m, S){
+  const b = block("Nachrichten und Chats", "Was aus den Matches geworden ist.");
+
+  if (!m.conversations.length){
+    const c = card("Chats", null);
+    c.__body.appendChild(el("div","empty","In der Datei sind keine Nachrichten enthalten."));
+    b.appendChild(c);
+    return b;
+  }
+
+  const convs = S.convs;
+  const msgs = S.msgs;
+  const mine = msgs.filter(x => x.mine);
+  const theirs = msgs.filter(x => !x.mine);
+
+  const g = el("div","grid g-kpi");
+  g.appendChild(statTile({label:"Chats", value:convs.length, sub:"im Zeitraum begonnen"}));
+  g.appendChild(statTile({label:"Nachrichten gesamt", value:msgs.length,
+    sub: fmtInt(mine.length) + " von dir · " + fmtInt(theirs.length) + " von anderen"}));
+  g.appendChild(statTile({label:"Ø Länge deiner Nachrichten",
+    value: safeDiv(sum(mine, x => x.len), mine.length),
+    format: v => isFinite(v) ? fmtInt(v) : "k. A.", unit:"Zeichen"}));
+  g.appendChild(statTile({label:"Antwortquote",
+    value: safeDiv(convs.filter(c => c.recv > 0).length, convs.length)*100,
+    format: v => isFinite(v) ? nf1.format(v) : "k. A.", unit:"%",
+    sub:"der Chats mit Rückmeldung"}));
+
+  const allReplyTheirs = [].concat(...convs.map(c => c.replyTheirs));
+  const allReplyMine   = [].concat(...convs.map(c => c.replyMine));
+  if (allReplyTheirs.length)
+    g.appendChild(statTile({label:"Antwortzeit der anderen", value:median(allReplyTheirs),
+      format: fmtDur, sub:"Median"}));
+  if (allReplyMine.length)
+    g.appendChild(statTile({label:"Deine Antwortzeit", value:median(allReplyMine),
+      format: fmtDur, sub:"Median"}));
+
+  const ghosted = convs.filter(c => c.ghosted).length;
+  g.appendChild(statTile({label:"Ohne jede Antwort", value:ghosted, dot:"var(--s2)",
+    sub: convs.length ? fmtPct(safeDiv(ghosted, convs.length)) + " deiner Chats" : ""}));
+  const started = convs.filter(c => c.startedByMe === true).length;
+  g.appendChild(statTile({label:"Von dir eröffnet", value:started,
+    sub: convs.length ? "von " + fmtInt(convs.length) + " Chats" : ""}));
+  b.appendChild(g);
+
+  const grid = el("div","grid g-2");
+  grid.style.marginTop = "14px";
+
+  // Tageszeit
+  if (msgs.length){
+    const byHour = Array.from({length:24}, (_, h) => ({
+      label: (h % 3 === 0) ? String(h) : "",
+      long: String(h).padStart(2,"0") + ":00 bis " + String(h).padStart(2,"0") + ":59",
+      v: msgs.filter(x => x.hour === h).length
+    }));
+    const cH = chartCard("Nachrichten nach Tageszeit", "Lokale Uhrzeit, gesendet und empfangen zusammen.",
+      w => drawColumns(w, byHour, {height:200, name:"Nachrichten"}),
+      {
+        columns:[{label:"Stunde"},{label:"Nachrichten",num:true},{label:"davon von dir",num:true}],
+        rows: byHour.map((d,h) => [d.long, fmtInt(d.v), fmtInt(msgs.filter(x => x.hour === h && x.mine).length)])
+      });
+    grid.appendChild(cH);
+  }
+
+  // Häufigste Wörter
+  const words = topWords(msgs, 12);
+  if (words.length){
+    const cW = chartCard("Deine häufigsten Wörter", "Ohne Füllwörter, aus allen Nachrichten im Zeitraum.",
+      w => drawBarsH(w, words.map(([wd, n]) => ({label:wd, v:n})), {rowH:28, labelW:Math.min(150, Math.max(90, w*0.28))}),
+      {
+        columns:[{label:"Wort"},{label:"Vorkommen",num:true}],
+        rows: words.map(([wd,n]) => [wd, fmtInt(n)])
+      });
+    grid.appendChild(cW);
+  }
+  if (grid.children.length) b.appendChild(grid);
+
+  // Emojis
+  const emos = topEmoji(msgs, 12);
+  if (emos.length){
+    const cE = card("Emojis", "Womit ihr euch ausdrückt.");
+    const p = el("div","pills");
+    emos.forEach(([e, n]) => p.appendChild(el("span","pill", e + "  " + fmtInt(n))));
+    cE.__body.appendChild(p);
+    const w = el("div"); w.style.marginTop = "14px"; w.appendChild(cE);
+    b.appendChild(w);
+  }
+
+  // Chattabelle
+  const cT = card("Alle Chats", "Ein Eintrag pro Konversation, längste zuerst.");
+  if (convs.length){
+    cT.__body.appendChild(renderTable(
+      [{label:"Chat"},{label:"Nachrichten",num:true},{label:"von dir",num:true},{label:"erhalten",num:true},
+       {label:"Beginn"},{label:"Letzte"},{label:"Dauer",num:true},{label:"Eröffnet"},{label:"Status"}],
+      convs.map(c => [
+        c.id, fmtInt(c.total), fmtInt(c.sent), fmtInt(c.recv),
+        c.firstKey ? fmtDay(c.firstKey) : "k. A.",
+        c.lastKey ? fmtDay(c.lastKey) : "k. A.",
+        c.spanDays ? fmtInt(c.spanDays) + " T." : "k. A.",
+        c.startedByMe === null ? "k. A." : (c.startedByMe ? "du" : "sie/er"),
+        c.recv > 0 ? "beantwortet" : (c.total ? "keine Antwort" : "leer")
+      ])
+    ));
+  } else {
+    cT.__body.appendChild(el("div","empty","Keine Chats in diesem Zeitraum."));
+  }
+
+  // Erste Nachrichten im Wortlaut
+  const openers = convs.filter(c => c.msgs.length && c.msgs[0].mine).slice(0, 6);
+  if (openers.length){
+    const h = el("p","note");
+    h.textContent = "Deine Gesprächseinstiege:";
+    h.style.marginTop = "16px";
+    cT.__body.appendChild(h);
+    openers.forEach(c => {
+      const q = el("div","quote");
+      q.style.marginTop = "8px";
+      q.textContent = c.msgs[0].text;
+      const meta = el("div","note", (c.firstKey ? fmtDay(c.firstKey) : "") + " · " +
+        (c.recv > 0 ? "wurde beantwortet" : "blieb unbeantwortet"));
+      cT.__body.appendChild(q);
+      cT.__body.appendChild(meta);
+    });
+  }
+  const wT = el("div"); wT.style.marginTop = "14px"; wT.appendChild(cT);
+  b.appendChild(wT);
+  return b;
+}
+
+/* ---- Profil ------------------------------------------------------------- */
+function renderProfile(m){
+  const u = m.user || {};
+  const b = block("Dein Profil", "So, wie Tinder dich gespeichert hat.");
+  const g = el("div","grid g-2");
+
+  // Stammdaten
+  const c1 = card("Stammdaten", null);
+  const kv = el("dl","kv");
+  function row(k, v){
+    if (v === undefined || v === null || v === "" ) return;
+    kv.appendChild(el("dt", null, k));
+    kv.appendChild(el("dd", null, v));
+  }
+  const birth = u.birth_date ? new Date(u.birth_date) : null;
+  let age = null;
+  if (birth && !isNaN(birth)){
+    const now = new Date();
+    age = now.getFullYear() - birth.getFullYear();
+    const mdiff = now.getMonth() - birth.getMonth();
+    if (mdiff < 0 || (mdiff === 0 && now.getDate() < birth.getDate())) age--;
+  }
+  row("Name", u.name);
+  if (age !== null) row("Alter", age + " Jahre" + (birth ? " (geb. " + birth.toLocaleDateString("de-DE") + ")" : ""));
+  row("Geschlecht", nice(u.gender));
+  row("Orientierung", nice(u.sexual_orientations));
+  if (u.city && u.city.name) row("Stadt", u.city.name + (u.city.region ? ", " + u.city.region : ""));
+  if (Array.isArray(u.jobs) && u.jobs.length){
+    const j = u.jobs[0];
+    const title = j.title && j.title.name ? j.title.name : null;
+    const comp = j.company && j.company.name ? j.company.name : null;
+    row("Job", [title, comp].filter(Boolean).join(" · "));
+  }
+  if (Array.isArray(u.schools) && u.schools.length) row("Uni / Schule", u.schools.map(s => s.name).filter(Boolean).join(", "));
+  if (u.education) row("Bildung", u.education);
+  row("Mail", u.email);
+  if (u.create_date) row("Account erstellt", new Date(u.create_date).toLocaleDateString("de-DE",{day:"numeric",month:"long",year:"numeric"}));
+  if (u.onboarded_at) row("Onboarding", new Date(u.onboarded_at).toLocaleDateString("de-DE",{day:"numeric",month:"long",year:"numeric"}));
+  if (u.active_time) row("Zuletzt aktiv", new Date(u.active_time).toLocaleString("de-DE"));
+  row("Registriert über", u.account_source);
+  if (u.client_metadata && u.client_metadata.platform) row("Plattform", u.client_metadata.platform);
+  c1.__body.appendChild(kv);
+  g.appendChild(c1);
+
+  // Sucheinstellungen
+  const c2 = card("Sucheinstellungen", "Wonach du filterst.");
+  const kv2 = el("dl","kv");
+  function row2(k, v){
+    if (v === undefined || v === null || v === "") return;
+    kv2.appendChild(el("dt", null, k));
+    kv2.appendChild(el("dd", null, v));
+  }
+  if (u.age_filter_min !== undefined && u.age_filter_max !== undefined)
+    row2("Altersfilter", u.age_filter_min + " bis " + u.age_filter_max + " Jahre");
+  if (u.distance_filter !== undefined) row2("Umkreis", u.distance_filter + " km");
+  row2("Interessiert an", nice(u.interested_in_genders));
+  if (u.gender_filter) row2("Geschlechterfilter", nice(u.gender_filter));
+  if (u.global_mode) row2("Globaler Modus", u.global_mode.is_enabled ? "an" : "aus");
+  if (u.show_gender_on_profile !== undefined) row2("Geschlecht im Profil", u.show_gender_on_profile ? "sichtbar" : "versteckt");
+  if (Array.isArray(u.user_interests) && u.user_interests.length) row2("Interessen", u.user_interests.length + " ausgewählt");
+  if (u.modes && u.modes.modes){
+    const names = Object.keys(u.modes.modes);
+    if (names.length) row2("Modi", names.join(", "));
+  }
+  c2.__body.appendChild(kv2);
+
+  if (Array.isArray(u.user_interests) && u.user_interests.length){
+    const p = el("div","pills");
+    p.style.marginTop = "14px";
+    u.user_interests.forEach(i => p.appendChild(el("span","pill", String(i))));
+    c2.__body.appendChild(p);
+  }
+  g.appendChild(c2);
+  b.appendChild(g);
+
+  // Bio & Prompts
+  const hasBio = typeof u.bio === "string" && u.bio.trim();
+  const hasPrompts = Array.isArray(u.prompts) && u.prompts.length;
+  const hasQuiz = Array.isArray(u.quiz_answers) && u.quiz_answers.length;
+  const hasDesc = Array.isArray(u.descriptors) && u.descriptors.length;
+
+  if (hasBio || hasPrompts || hasQuiz || hasDesc){
+    const g2 = el("div","grid g-2");
+    g2.style.marginTop = "14px";
+
+    if (hasBio || hasPrompts){
+      const c3 = card("Bio und Prompts", "Dein Text auf dem Profil.");
+      if (hasBio){
+        const q = el("div","quote");
+        q.textContent = decodeEntities(u.bio);
+        c3.__body.appendChild(q);
+      }
+      if (hasPrompts){
+        const box = el("div");
+        box.style.marginTop = hasBio ? "16px" : "0";
+        u.prompts.forEach(p => {
+          const pr = el("div","prompt");
+          pr.appendChild(el("div","prompt-q", decodeEntities(p.questionText || "")));
+          pr.appendChild(el("div","prompt-a", decodeEntities(p.answerText || "")));
+          box.appendChild(pr);
+        });
+        c3.__body.appendChild(box);
+      }
+      g2.appendChild(c3);
+    }
+
+    if (hasDesc || hasQuiz){
+      const c4 = card("Angaben über dich", "Was du in den Profilkarten ausgewählt hast.");
+      if (hasDesc){
+        const kv3 = el("dl","kv");
+        u.descriptors.forEach(d => {
+          const val = Array.isArray(d.choices) ? d.choices.join(", ") : (d.value || "");
+          if (!val) return;
+          kv3.appendChild(el("dt", null, d.name || "k. A."));
+          kv3.appendChild(el("dd", null, val));
+        });
+        c4.__body.appendChild(kv3);
+      }
+      if (hasQuiz){
+        const box = el("div");
+        box.style.marginTop = hasDesc ? "16px" : "0";
+        u.quiz_answers.forEach(q => {
+          const pr = el("div","prompt");
+          pr.appendChild(el("div","prompt-q", q.name || ""));
+          const p = el("div","pills");
+          (q.answers || []).forEach(a => p.appendChild(el("span","pill", String(a))));
+          pr.appendChild(p);
+          box.appendChild(pr);
+        });
+        c4.__body.appendChild(box);
+      }
+      g2.appendChild(c4);
+    }
+    b.appendChild(g2);
+  }
+  return b;
+}
+/** Tinder speichert fehlende Angaben als "Unknown", das ist keine Information. */
+function nice(v){
+  if (v === undefined || v === null) return null;
+  const s = Array.isArray(v) ? v.join(", ") : String(v);
+  if (!s.trim()) return null;
+  return /^unknown$/i.test(s.trim()) ? "keine Angabe" : s;
+}
+function decodeEntities(s){
+  if (typeof s !== "string") return "";
+  const map = {"&colon;":":", "&rpar;":")", "&lpar;":"(", "&amp;":"&", "&quot;":'"', "&apos;":"'",
+               "&excl;":"!", "&comma;":",", "&period;":".", "&semi;":";", "&equals;":"=", "&plus;":"+",
+               "&ast;":"*", "&dollar;":"$", "&num;":"#", "&percnt;":"%", "&sol;":"/", "&bsol;":"\\",
+               "&lt;":"<", "&gt;":">", "&nbsp;":" ", "&commat;":"@", "&quest;":"?", "&lowbar;":"_",
+               "&hyphen;":"-", "&lsqb;":"[", "&rsqb;":"]", "&lcub;":"{", "&rcub;":"}", "&verbar;":"|",
+               "&grave;":"`", "&tilde;":"~", "&circ;":"^"};
+  return s.replace(/&[a-zA-Z]+;/g, m => map[m] !== undefined ? map[m] : m)
+          .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(+d));
+}
+
+/* ---- Fotos, Musik ------------------------------------------------------- */
+function renderMedia(m){
+  const has = m.photos.length || (m.spotify && (m.spotify.spotify_top_artists || m.spotify.spotify_theme_track));
+  if (!has) return el("div");
+
+  const b = block("Fotos und Musik", "Bilder werden direkt von Tinders Servern geladen. Je nach Alter des Exports funktionieren die Links noch oder nicht mehr.");
+  const g = el("div","grid g-2");
+
+  if (m.photos.length){
+    const c = card("Profilfotos", fmtInt(m.photos.length) + " Bilder im Export.");
+    const grid = el("div","photos");
+    m.photos.forEach((p, i) => {
+      const box = el("div","photo");
+      const fb = el("div","photo-fb");
+      fb.appendChild(el("div", null, "Bild " + (i+1)));
+      fb.appendChild(el("div", null, "nicht mehr abrufbar"));
+      box.appendChild(fb);
+      if (p && p.url){
+        const img = el("img");
+        img.loading = "lazy";
+        img.alt = "Profilfoto " + (i+1);
+        img.referrerPolicy = "no-referrer";
+        img.onerror = () => img.remove();
+        img.src = p.url;
+        box.appendChild(img);
+      }
+      const cap = el("div","photo-cap");
+      cap.textContent = p && p.created_at
+        ? new Date(p.created_at).toLocaleDateString("de-DE",{day:"numeric",month:"short",year:"numeric"})
+        : ("Foto " + (i+1));
+      box.appendChild(cap);
+      grid.appendChild(box);
+    });
+    c.__body.appendChild(grid);
+    g.appendChild(c);
+  }
+
+  const sp = m.spotify;
+  if (sp && (Array.isArray(sp.spotify_top_artists) && sp.spotify_top_artists.length || sp.spotify_theme_track)){
+    const c = card("Spotify", sp.spotify_user && sp.spotify_user.display_name
+      ? "Verknüpft mit " + sp.spotify_user.display_name : "Mit deinem Profil verknüpft.");
+    if (sp.spotify_theme_track){
+      const t = sp.spotify_theme_track;
+      const q = el("div","quote");
+      q.textContent = "♪ " + (t.name || "") +
+        (Array.isArray(t.artists) && t.artists.length ? " von " + t.artists.map(a => a && a.name).filter(Boolean).join(", ") : "");
+      c.__body.appendChild(q);
+      c.__body.appendChild(el("div","note","Dein Anthem"));
+    }
+    const arts = Array.isArray(sp.spotify_top_artists) ? sp.spotify_top_artists.slice(0, 12) : [];
+    if (arts.length){
+      const list = el("div","artists");
+      list.style.marginTop = "14px";
+      const maxPop = Math.max(1, maxOf(arts, a => a.popularity || 0));
+      arts.forEach((a, i) => {
+        const row = el("div","artist");
+        row.appendChild(el("div","artist-rank", String(i+1)));
+        const imgs = Array.isArray(a.images) ? a.images : [];
+        const small = imgs.length ? (imgs[imgs.length-1] || imgs[0]) : null;
+        if (small && typeof small === "object" && small.url){
+          const im = el("img","artist-img");
+          im.loading = "lazy"; im.alt = ""; im.referrerPolicy = "no-referrer";
+          im.onerror = () => im.remove();
+          im.src = small.url;
+          row.appendChild(im);
+        }
+        row.appendChild(el("div", null, a.name || "k. A."));
+        const meter = el("div","artist-meter");
+        const fill = el("div","artist-fill");
+        fill.style.width = (100 * (a.popularity || 0) / maxPop) + "%";
+        fill.style.setProperty("--i", i);
+        meter.appendChild(fill);
+        row.appendChild(meter);
+        list.appendChild(row);
+      });
+      c.__body.appendChild(list);
+      c.__body.appendChild(el("div","note","Balken = Popularität bei Spotify des Künstlers, nicht deine Hördauer."));
+    }
+    g.appendChild(c);
+  }
+  b.appendChild(g);
+  return b;
+}
+
+/* ---- Käufe & Rest ------------------------------------------------------- */
+function renderRest(m){
+  const b = block("Käufe, Kampagnen und Rohdaten", "Der Rest der Datei, nichts geht verloren.");
+  const raw = m.raw;
+
+  // Käufe
+  const p = m.purchases || {};
+  const pg = el("div","grid g-3");
+  const purchaseKeys = [
+    ["subscription","Abos"],
+    ["consumable","Einzelkäufe"],
+    ["boost_tracking","Boosts"],
+    ["super_like_tracking","Superlikepakete"]
+  ];
+  let anyPurchase = false;
+  purchaseKeys.forEach(([k, lab]) => {
+    const v = p[k];
+    const n = Array.isArray(v) ? v.length : 0;
+    if (n) anyPurchase = true;
+    pg.appendChild(statTile({label:lab, value:n, sub: n ? "Einträge im Export" : "nichts gekauft"}));
+  });
+  const cP = card("Käufe und Abos", anyPurchase ? "Was du bei Tinder ausgegeben hast." : "Du hast nie Geld bei Tinder gelassen.");
+  cP.__body.appendChild(pg);
+  if (anyPurchase){
+    const det = el("div");
+    det.style.marginTop = "14px";
+    det.appendChild(jsonBlock(p, "Purchases"));
+    cP.__body.appendChild(det);
+  }
+  b.appendChild(cP);
+
+  // Kampagnen / Modi / sonstige bekannte Abschnitte
+  const others = [
+    ["Campaigns", raw.Campaigns, "Kampagnen und Events, für die du freigeschaltet warst"],
+    ["SocialGraph", raw.SocialGraph, "Gemeinsame Kontakte"],
+    ["ConversationFeedback", raw.ConversationFeedback, "Bewertungen von Gesprächen"],
+    ["Tailor", raw.Tailor, "Funktionen mit KI (Insights, Fragen, Kamerarolle)"],
+    ["SwipeNotes", raw.SwipeNotes, "Notizen beim Swipen"],
+    ["ReportContent", raw.ReportContent, "Meldungen"],
+    ["Experiences", raw.Experiences, "Experiences"]
+  ].filter(([, v]) => v !== undefined);
+
+  const filled = others.filter(([, v]) => !isEmptyish(v));
+  const empty = others.filter(([, v]) => isEmptyish(v));
+
+  if (filled.length){
+    const c = card("Weitere Abschnitte", "Was Tinder sonst noch über dich gespeichert hat.");
+    filled.forEach(([k, v, desc]) => {
+      const h = el("div","prompt");
+      h.appendChild(el("div","prompt-q", desc || k));
+      h.appendChild(jsonBlock(v, k));
+      c.__body.appendChild(h);
+    });
+    const w = el("div"); w.style.marginTop = "14px"; w.appendChild(c);
+    b.appendChild(w);
+  }
+  if (empty.length){
+    const c = card("Leere Abschnitte", "Vorhanden, aber ohne Inhalt.");
+    const pl = el("div","pills");
+    empty.forEach(([k]) => pl.appendChild(el("span","pill", k)));
+    c.__body.appendChild(pl);
+    const w = el("div"); w.style.marginTop = "14px"; w.appendChild(c);
+    b.appendChild(w);
+  }
+
+  // Alles unbekannte
+  if (m.extraTop.length){
+    const c = card("Nicht zugeordnete Felder", "Abschnitte, die dieses Tool noch nicht kennt, hier als Rohdaten.");
+    m.extraTop.forEach(k => c.__body.appendChild(jsonBlock(raw[k], k)));
+    const w = el("div"); w.style.marginTop = "14px"; w.appendChild(c);
+    b.appendChild(w);
+  }
+
+  // Kompletter Baum
+  const cRaw = card("Komplette Rohdaten", "Die gesamte data.json zum Durchklicken.");
+  const keys = Object.keys(raw);
+  cRaw.__body.appendChild(el("p","note", keys.length + " Abschnitte: " + keys.join(", ")));
+  const holder = el("div");
+  holder.style.marginTop = "10px";
+  const btn = el("button","btn","Rohdaten anzeigen");
+  btn.onclick = () => {
+    holder.replaceChildren(jsonBlock(raw, "data.json"));
+    btn.remove();
+  };
+  cRaw.__body.appendChild(btn);
+  cRaw.__body.appendChild(holder);
+  const w = el("div"); w.style.marginTop = "14px"; w.appendChild(cRaw);
+  b.appendChild(w);
+
+  return b;
+}
+
+/* ============================================================
+   9. Appsteuerung
+   ============================================================ */
+const dropEl = document.getElementById("drop");
+const fileEl = document.getElementById("file");
+const errEl = document.getElementById("intake-err");
+
+function showError(msg){
+  errEl.replaceChildren();
+  const d = el("div","err", msg);
+  errEl.appendChild(d);
+}
+function clearError(){ errEl.replaceChildren(); }
+
+async function handleFile(file){
+  clearError();
+  try {
+    const raw = await readDropped(file);
+    if (!raw || typeof raw !== "object") throw new Error("Die Datei enthält kein JSON Objekt.");
+    if (!raw.Usage && !raw.User && !raw.Messages)
+      throw new Error("Das sieht nicht nach einem Export von Tinder aus. Es fehlen die Abschnitte Usage, User und Messages.");
+    start(raw);
+  } catch (e){
+    showError((e && e.message) ? e.message : "Die Datei konnte nicht gelesen werden.");
+  }
+}
+
+function start(raw){
+  MODEL = buildModel(raw);
+  RANGE = {mode:"all", from:null, to:null};
+  GRAN = "auto";
+  intake.classList.add("hidden");
+  report.classList.remove("hidden");
+  document.getElementById("btn-reset").classList.remove("hidden");
+  document.getElementById("btn-print").classList.remove("hidden");
+  render();
+  window.scrollTo(0, 0);
+}
+
+dropEl.addEventListener("click", () => fileEl.click());
+dropEl.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " "){ e.preventDefault(); fileEl.click(); }
+});
+fileEl.addEventListener("change", () => {
+  if (fileEl.files && fileEl.files[0]) handleFile(fileEl.files[0]);
+});
+["dragenter","dragover"].forEach(ev => {
+  dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.add("over"); });
+});
+["dragleave","drop"].forEach(ev => {
+  dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.remove("over"); });
+});
+dropEl.addEventListener("drop", e => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+window.addEventListener("dragover", e => e.preventDefault());
+window.addEventListener("drop", e => e.preventDefault());
+
+document.getElementById("btn-reset").onclick = () => {
+  clearObservers();
+  MODEL = null;
+  report.classList.add("hidden");
+  report.replaceChildren();
+  intake.classList.remove("hidden");
+  document.getElementById("btn-reset").classList.add("hidden");
+  document.getElementById("btn-print").classList.add("hidden");
+  fileEl.value = "";
+  clearError();
+  window.scrollTo(0, 0);
+};
+document.getElementById("btn-print").onclick = () => window.print();
+window.addEventListener("beforeprint", finalizeCounts);
+
+// Theme
+const themeBtn = document.getElementById("btn-theme");
+themeBtn.onclick = () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = cur ? (cur === "dark" ? "light" : "dark") : (sysDark ? "light" : "dark");
+  document.documentElement.setAttribute("data-theme", next);
+};
+
+window.addEventListener("scroll", () => { if (tipOn) hideTip(); }, {passive:true});
+
+// Optionaler Haken zum Einbetten: Daten direkt in die Datei schreiben und ohne Upload starten.
+if (window.__TINDER_DATA__) start(window.__TINDER_DATA__);
+
+})();
+</script>
+</body>
+</html>

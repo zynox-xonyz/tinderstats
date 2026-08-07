@@ -1,0 +1,10 @@
+data.json
+myData/
+myData.zip
+*.zip
+_test*.html
+*.local.html
+
+.DS_Store
+Thumbs.db
+desktop.ini
