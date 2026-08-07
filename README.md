@@ -78,9 +78,7 @@ einbetten. Dafür vor dem Hauptskript folgendes einfügen:
 <script>window.__TINDER_DATA__ = { hier der Inhalt der data.json };</script>
 ```
 
-Die Seite startet dann ohne Auswahldialog. **Eine solche Datei enthält deine
-persönlichen Daten und gehört niemals in ein öffentliches Repository.** Die beiliegende
-`.gitignore` fängt die üblichen Dateinamen ab, verlass dich aber nicht allein darauf.
+Die Seite startet dann ohne Auswahldialog.
 
 ## Technik
 
